@@ -20,7 +20,15 @@ int main()
         
     CALCULATION_TREE_DUMP(&akinator_tree);
 
-    if ((err = SaveTreeToFile(&akinator_tree, "calculation_tree.txt")))
+    if ((err = TreeOptimization(&akinator_tree)))
+    {
+        PrintError(err);
+        return 4;
+    }
+
+    CALCULATION_TREE_DUMP(&akinator_tree);
+    
+    if ((err = SaveTreeToFile(&akinator_tree, "calculation_tree_expression.txt")))
     {
         PrintError(err);
         return 5;

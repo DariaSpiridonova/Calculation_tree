@@ -135,6 +135,9 @@ void PrintEdges(FILE *fp, node_t *node);
 void LinkEdges(FILE *fp, node_t *node);
 void CreateGraph(const calculation_tree *tree, const char *gvfile_name);
 
+Calculation_Tree_Errors TreeOptimization(calculation_tree *tree);
+void TreeOptimizationRecursive(calculation_tree *tree, node_t **node);
+
 // Calculation_Tree_Errors CalculationTreeGame(calculation_tree *tree);
 // void GetARequestNumber(ssize_t *num);
 // Calculation_Tree_Errors PlayGame(calculation_tree *tree);

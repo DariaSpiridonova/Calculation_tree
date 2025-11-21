@@ -153,7 +153,7 @@ void CalculationTreeDump(calculation_tree *tree, const char *file, int line)
 
     DumpToLogfile(tree, tree->file_name, gvfile_name, &rank);
 
-    DumpToTexFile(tree, "calculation_tree.tex");
+    //DumpToTexFile(tree, "calculation_tree.tex");
 
     CreateGraph(tree, gvfile_name);
 }
@@ -164,10 +164,10 @@ void DumpToConsole(const calculation_tree *tree, const char *file, int line, ssi
     Dump(stdout, tree, rank);
 }
 
-void DumpToTexFile(const calculation_tree *tree, const char *texfile_name)
-{
+// void DumpToTexFile(const calculation_tree *tree, const char *texfile_name)
+// {
 
-}
+// }
 
 void Dump(FILE *fp, const calculation_tree *tree, ssize_t *rank)
 {
@@ -231,11 +231,6 @@ void CreateGraph(const calculation_tree *tree, const char *gvfile_name)
     fprintf(fp, "   bgcolor=\"LightBlue\";\n");
 
     PrintEdges(fp, tree->root);
-    #ifdef BEAUTIFUL_DUMP
-    fprintf(fp, "\"node_%p\" [fillcolor = \"violet\", label = \"{<type> type = %s | <val> val = %s | {<left_operand>  op_1| <right_operand> op_2}}\"];\n", tree->root, type_buffer[tree->root->type], operations_buffer[tree->root->value.operation]);
-    #else 
-    fprintf(fp, "\"node_%p\" [fillcolor = \"violet\", label = \"{<parent> %p | <data> %s | {<left> %p |<right> %p} | {<left_answer> yes |<right_answer> no}}\"];\n", tree->root, tree->root->parent, tree->root->data, tree->root->left, tree->root->right);
-    #endif
     LinkEdges(fp, tree->root);
 
     fprintf(fp, "\n}");
@@ -266,7 +261,7 @@ void PrintEdges(FILE *fp, node_t *node)
     if (node->type == VAR_TYPE)
         fprintf(fp, "\"node_%p\" [fillcolor = \"Pink\", label = \"{<type> type = %s | <val> val = %s}\"];\n", node, type_buffer[node->type], variables_buffer[node->value.variable]);
     else if (node->type == NUM_TYPE)
-        fprintf(fp, "\"node_%p\" [fillcolor = \"red\", label = \"{<type> type = %s | <val> val = %lf}\"];\n", node, type_buffer[node->type], node->value.number);
+        fprintf(fp, "\"node_%p\" [fillcolor = \"deeppink\", label = \"{<type> type = %s | <val> val = %lf}\"];\n", node, type_buffer[node->type], node->value.number);
     if (node->type == OP_TYPE)
         fprintf(fp, "\"node_%p\" [fillcolor = \"violet\", label = \"{<type> type = %s | <val> val = %s | {<left_operand>  op_1| <right_operand> op_2}}\"];\n", node, type_buffer[node->type], operations_buffer[node->value.operation]);
 
@@ -354,29 +349,36 @@ void SaveTreeToFileRecursive(FILE *fp, node_t *node)
 {
     if (node == NULL)
     {
-        fprintf(fp, "nil ");
+        //fprintf(fp, "nil ");
         return;
     }
+
+    if (node->parent != NULL && node->parent->left == node)
+        fprintf(fp, "( ");
     
-    fprintf(fp, "( ");
+    SaveTreeToFileRecursive(fp, node->left);
+    
     switch (node->type)
     {
         case VAR_TYPE:
             fprintf(fp, "%s ", variables_buffer[node->value.variable]);
             break;
+
         case OP_TYPE:
             fprintf(fp, "%s ", operations_buffer[node->value.operation]);
             break;
+
         case NUM_TYPE:
             fprintf(fp, "%lf ", node->value.number);
             break;
+
         default:
             break;
     }
 
-    SaveTreeToFileRecursive(fp, node->left);
     SaveTreeToFileRecursive(fp, node->right);
-    fprintf(fp, ") ");
+    if (node->parent != NULL  && node->parent->right == node)
+        fprintf(fp, ") ");
     return;
 }
 
@@ -572,6 +574,135 @@ Calculation_Tree_Errors NodeFromFileInit(calculation_tree *tree, char **position
         return err;
 
     return err;
+}
+
+Calculation_Tree_Errors TreeOptimization(calculation_tree *tree)
+{
+    ASSERTS(tree);
+
+    Calculation_Tree_Errors err = NO_ERROR;
+    if ((err = CalculationTreeVerify(tree)))
+        return err;
+
+    ssize_t number_of_elements = tree->num_of_el;
+
+    do
+    {
+        number_of_elements = tree->num_of_el;
+        TreeOptimizationRecursive(tree, &(tree->root));
+    }
+    while (number_of_elements != tree->num_of_el);
+
+    if ((err = CalculationTreeVerify(tree)))
+        return err;
+
+    return err;
+}
+
+void TreeOptimizationRecursive(calculation_tree *tree, node_t **node)
+{
+    if (*node == NULL)
+        return;
+
+    if ((*node)->type == OP_TYPE && (*node)->left->type == NUM_TYPE && (*node)->right->type == NUM_TYPE)
+    {
+        printf("^^^1^^^");
+        (*node)->type = NUM_TYPE;
+        switch ((*node)->value.operation)
+        {
+            case NO_OP:
+                break;
+
+            case ADD:
+                (*node)->value.number = (*node)->left->value.number + (*node)->right->value.number;
+                break;
+
+            case SUB:
+                (*node)->value.number = (*node)->left->value.number - (*node)->right->value.number;
+                break;
+
+            case MUL:
+                (*node)->value.number = (*node)->left->value.number * (*node)->right->value.number;
+                break;
+
+            case DIV:
+                (*node)->value.number = (*node)->left->value.number / (*node)->right->value.number;
+                break;
+
+            case DEG:
+                (*node)->value.number = pow((*node)->left->value.number, (*node)->right->value.number);
+                break;
+
+            case LOG:
+                (*node)->value.number = log((*node)->left->value.number) / log((*node)->right->value.number);
+                break;
+                
+            default:
+                break;
+        }
+
+        free((*node)->left); 
+        (*node)->left = NULL;
+        free((*node)->right); 
+        (*node)->right = NULL;
+
+        tree->num_of_el -= 2;
+
+        return;
+    }
+
+    else if ((*node)->type == OP_TYPE && (((*node)->left->type == NUM_TYPE && (*node)->right == NULL) || ((*node)->right->type == NUM_TYPE && (*node)->left == NULL)))
+    {
+        printf("^^^2^^^");
+        (*node)->type = NUM_TYPE;
+
+        node_t *node_num = (*node)->left;
+
+        if ((*node)->left == NULL) 
+            node_num = (*node)->right;
+
+        switch ((*node)->value.operation)
+        {
+            case SIN:
+                (*node)->value.number = sin(node_num->value.number);
+                break;
+
+            case COS:
+                (*node)->value.number = cos(node_num->value.number);
+                break;
+
+            case TG:
+                (*node)->value.number = tan(node_num->value.number);
+                break;
+
+            case CTG:
+                (*node)->value.number = 1 / tan(node_num->value.number);
+                break;
+                
+            default:
+                void((*node)->value.operation);
+                break;
+        }
+
+        if ((*node)->left != NULL) 
+        {
+            free((*node)->left); 
+            (*node)->left = NULL;
+        }
+        else if ((*node)->right != NULL) 
+        {
+            free((*node)->right); 
+            (*node)->right = NULL;
+        }
+        tree->num_of_el--;
+
+        return;
+    }
+    
+    TreeOptimizationRecursive(tree, &(*node)->left);
+    TreeOptimizationRecursive(tree, &(*node)->right);
+
+    return;
 }
 
 bool is_number(char *node_value)
