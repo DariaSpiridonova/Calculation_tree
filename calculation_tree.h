@@ -112,10 +112,11 @@ enum Calculation_Tree_Errors
     ERROR_DURING_READ_FILE,
     INCORRECT_DATA_IN_FILE,
     COLORS_ARE_NOT_SUPPORTED,
-    NON_EXISTENT_VALUE
+    NON_EXISTENT_VALUE,
+    DIVISION_BY_ZERO_IS_UNACCEPTABLE
 };
 
-bool is_number(char *node_value);
+bool is_number(const char *node_value);
 
 Calculation_Tree_Errors CalculationTreeInit(calculation_tree *tree, const char *logfile_name);
 
@@ -135,31 +136,12 @@ void PrintEdges(FILE *fp, node_t *node);
 void LinkEdges(FILE *fp, node_t *node);
 void CreateGraph(const calculation_tree *tree, const char *gvfile_name);
 
-Calculation_Tree_Errors TreeOptimization(calculation_tree *tree);
-void TreeOptimizationRecursive(calculation_tree *tree, node_t **node);
-
-// Calculation_Tree_Errors CalculationTreeGame(calculation_tree *tree);
-// void GetARequestNumber(ssize_t *num);
-// Calculation_Tree_Errors PlayGame(calculation_tree *tree);
-// void AskQuestion(node_t **node);
-// Calculation_Tree_Errors Victory(calculation_tree *tree);
-// Calculation_Tree_Errors AddingNode(calculation_tree *tree, node_t *node);
-// Calculation_Tree_Errors NodeInit(calculation_tree *tree, node_t **node, node_t *parent, char **string);
-// bool GetAnswer();
-// void GetObject(char **ptr);
-// void GetFeature(char **ptr, char *object, node_t *node);
-// bool GetDifference(char **ptr, char *object, node_t *node);
-// void DiscardSuperfluous();
-
-// Calculation_Tree_Errors FindObject(calculation_tree *tree);
-// bool FindObjectRecursive(calculation_tree *tree, node_t *node, char *object, node_t **ptr_object, bool *object_was_found, node_t **ptrs_on_nodes, size_t *index);
-// void GetDescription(calculation_tree *tree, node_t * ptr_object, node_t **ptrs_on_nodes, size_t i);
-
-// Calculation_Tree_Errors CompareObjects(calculation_tree *tree);
-// void compare_found_items(calculation_tree *tree, bool *not_root_element, node_t **ptrs1_on_nodes, node_t **ptrs2_on_nodes, node_t *ptr_object1, node_t *ptr_object2);
-// void print_general_signs(bool not_root_element, node_t **ptrs1_on_nodes, node_t **ptrs2_on_nodes, size_t *i1, size_t *i2);
-// void print_differences(calculation_tree *tree, node_t **ptrs1_on_nodes, node_t **ptrs2_on_nodes, node_t *ptr_object1, node_t *ptr_object2, size_t *i1, size_t *i2);
-// void free_objects(char *object1, char *object2, node_t **ptrs1_on_nodes, node_t **ptrs2_on_nodes);
+// Optimization
+Calculation_Tree_Errors ConstantsConvolution(calculation_tree *tree);
+void ConstantsConvolutionRecursive(calculation_tree *tree, node_t **node);
+Calculation_Tree_Errors RemovingNeutralElements(calculation_tree *tree);
+Calculation_Tree_Errors RemovingNeutralElementsRecursive(calculation_tree *tree, node_t **node);
+bool is_a_specific_number(double value, int number);
 
 Calculation_Tree_Errors SaveTreeToFile(calculation_tree *tree, const char *name_of_file);
 void SaveTreeToFileRecursive(FILE *fp, node_t *node);

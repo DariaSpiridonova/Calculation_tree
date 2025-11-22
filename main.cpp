@@ -20,24 +20,28 @@ int main()
         
     CALCULATION_TREE_DUMP(&akinator_tree);
 
-    if ((err = TreeOptimization(&akinator_tree)))
-    {
-        PrintError(err);
-        return 4;
-    }
-
-    CALCULATION_TREE_DUMP(&akinator_tree);
-    
-    if ((err = SaveTreeToFile(&akinator_tree, "calculation_tree_expression.txt")))
+    if ((err = RemovingNeutralElements(&akinator_tree)))
     {
         PrintError(err);
         return 5;
     }
 
-    if ((err = CalculationTreeDestroy(&akinator_tree)))
+    if ((err = ConstantsConvolution(&akinator_tree)))
+    {
+        PrintError(err);
+        return 4;
+    }    
+
+    if ((err = SaveTreeToFile(&akinator_tree, "calculation_tree_expression.txt")))
     {
         PrintError(err);
         return 6;
+    }
+
+    if ((err = CalculationTreeDestroy(&akinator_tree)))
+    {
+        PrintError(err);
+        return 7;
     }
 
     return 0;

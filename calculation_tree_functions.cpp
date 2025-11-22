@@ -576,7 +576,7 @@ Calculation_Tree_Errors NodeFromFileInit(calculation_tree *tree, char **position
     return err;
 }
 
-Calculation_Tree_Errors TreeOptimization(calculation_tree *tree)
+Calculation_Tree_Errors ConstantsConvolution(calculation_tree *tree)
 {
     ASSERTS(tree);
 
@@ -589,7 +589,8 @@ Calculation_Tree_Errors TreeOptimization(calculation_tree *tree)
     do
     {
         number_of_elements = tree->num_of_el;
-        TreeOptimizationRecursive(tree, &(tree->root));
+        ConstantsConvolutionRecursive(tree, &(tree->root));
+        CALCULATION_TREE_DUMP(tree);
     }
     while (number_of_elements != tree->num_of_el);
 
@@ -599,14 +600,13 @@ Calculation_Tree_Errors TreeOptimization(calculation_tree *tree)
     return err;
 }
 
-void TreeOptimizationRecursive(calculation_tree *tree, node_t **node)
+void ConstantsConvolutionRecursive(calculation_tree *tree, node_t **node)
 {
     if (*node == NULL)
         return;
 
     if ((*node)->type == OP_TYPE && (*node)->left->type == NUM_TYPE && (*node)->right->type == NUM_TYPE)
     {
-        printf("^^^1^^^");
         (*node)->type = NUM_TYPE;
         switch ((*node)->value.operation)
         {
@@ -653,7 +653,6 @@ void TreeOptimizationRecursive(calculation_tree *tree, node_t **node)
 
     else if ((*node)->type == OP_TYPE && (((*node)->left->type == NUM_TYPE && (*node)->right == NULL) || ((*node)->right->type == NUM_TYPE && (*node)->left == NULL)))
     {
-        printf("^^^2^^^");
         (*node)->type = NUM_TYPE;
 
         node_t *node_num = (*node)->left;
@@ -699,18 +698,229 @@ void TreeOptimizationRecursive(calculation_tree *tree, node_t **node)
         return;
     }
     
-    TreeOptimizationRecursive(tree, &(*node)->left);
-    TreeOptimizationRecursive(tree, &(*node)->right);
+    ConstantsConvolutionRecursive(tree, &(*node)->left);
+    ConstantsConvolutionRecursive(tree, &(*node)->right);
 
     return;
 }
 
-bool is_number(char *node_value)
+Calculation_Tree_Errors RemovingNeutralElements(calculation_tree *tree)
+{
+    ASSERTS(tree);
+
+    Calculation_Tree_Errors err = NO_ERROR;
+    if ((err = CalculationTreeVerify(tree)))
+        return err;
+
+    ssize_t number_of_elements = tree->num_of_el;
+
+    do
+    {
+        number_of_elements = tree->num_of_el;
+        RemovingNeutralElementsRecursive(tree, &(tree->root));
+        CALCULATION_TREE_DUMP(tree);
+    }
+    while (number_of_elements != tree->num_of_el);
+
+    if ((err = CalculationTreeVerify(tree)))
+        return err;
+
+    return err;
+}
+
+Calculation_Tree_Errors RemovingNeutralElementsRecursive(calculation_tree *tree, node_t **node)
+{
+    static Calculation_Tree_Errors err = NO_ERROR;
+
+    if (err) return err;
+
+    if (*node == NULL)
+        return err;
+
+    if (*node != tree->root) printf("%p %p \n", (*node)->parent->left, (*node)->parent->right);
+
+    if ((*node)->type == OP_TYPE && ((*node)->left->type == NUM_TYPE || (*node)->right->type == NUM_TYPE))
+    {
+        printf("OP_TYPE = %s\n", operations_buffer[(*node)->value.operation]);
+        printf("(*node)->left->type = %s\n", type_buffer[(*node)->left->type]);
+        printf("(*node)->right->type = %s\n", type_buffer[(*node)->right->type]);
+        node_t *node_neutral = NULL, *node_insignificant = NULL;
+        if ((*node)->right->type == NUM_TYPE && is_a_specific_number((*node)->right->value.number, 0))
+        {
+            printf("is_a_specific_number((*node)->right->value.number, 0)\n");
+            node_neutral = (*node)->right;
+            node_insignificant = (*node)->left;
+        }
+            
+        else if ((*node)->left->type == NUM_TYPE && is_a_specific_number((*node)->left->value.number, 0))
+        {
+            printf("is_a_specific_number((*node)->left->value.number, 0)\n");
+            node_neutral = (*node)->left;
+            node_insignificant = (*node)->right;
+        }
+
+        if (node_neutral != NULL)
+        {
+            printf("OP_TYPE = %s\n", operations_buffer[(*node)->value.operation]);
+            switch((*node)->value.operation)
+            {
+
+                case ADD:
+                case SUB:
+                    if (node_neutral == (*node)->left)
+                    {
+                        free(node_neutral);
+                        node_neutral = NULL;
+                        (*node)->left = NULL;
+                        (*node)->type = (*node)->right->type;
+                        (*node)->value = node_insignificant->value;
+                        free(node_insignificant);
+                        node_insignificant = NULL;
+                        (*node)->right = NULL;
+                    }
+                    else
+                    {
+                        free(node_neutral);
+                        node_neutral = NULL;
+                        (*node)->right = NULL;
+                        (*node)->type = (*node)->left->type;
+                        (*node)->value = node_insignificant->value;
+                        free(node_insignificant);
+                        node_insignificant = NULL;
+                        (*node)->left = NULL;
+                    }
+
+                    tree->num_of_el -= 2;
+                    return err;
+
+                case DIV:
+                    if (node_neutral == (*node)->right) 
+                    {
+                        err = DIVISION_BY_ZERO_IS_UNACCEPTABLE;
+                        return err;
+                    }
+                    [[fallthrough]];
+
+                case MUL:
+                    (*node)->type = NUM_TYPE;
+                    (*node)->value.number = 0;
+                    free(node_neutral);
+                    node_neutral = NULL;
+                    CalculationTreeDestroyRecursive(tree, &(node_insignificant));
+                    (*node)->left = NULL;
+                    (*node)->right = NULL;
+                    tree->num_of_el--;
+                    printf("num_of_el = %zd\n", tree->num_of_el);
+                    return err;
+
+                default:
+                    break;
+            }
+        }
+
+        node_neutral = NULL;
+        node_insignificant = NULL;
+        if (is_a_specific_number((*node)->right->value.number, 1)) printf("YES\n");
+        if ((*node)->right->type == NUM_TYPE && is_a_specific_number((*node)->right->value.number, 1))
+        {
+            node_neutral = (*node)->right;
+            node_insignificant = (*node)->left;
+        }
+            
+        if ((*node)->left->type == NUM_TYPE && is_a_specific_number((*node)->left->value.number, 1))
+        {
+            node_neutral = (*node)->left;
+            node_insignificant = (*node)->right;
+        }
+
+        if (node_neutral != NULL)
+        {
+            printf("We are in 1 case\n*\n*\n*\n*\n\n\n");
+            printf("OP_TYPE = %s\n", operations_buffer[(*node)->value.operation]);
+             printf("%p \n", node_insignificant);
+              printf("%p \n", (*node)->right);
+             printf("%p \n", (*node)->parent->right);
+             printf("%p \n", (*node)->parent->left);
+              
+            switch((*node)->value.operation)
+            {
+                
+                case DIV:
+                    if (node_neutral == (*node)->left) 
+                    {
+                        break;
+                    }
+                    [[fallthrough]];
+
+                case MUL:
+                    if (node_neutral == (*node)->left)
+                    {
+                        printf("OK1\n");
+                        free(node_neutral);
+                        node_neutral = NULL;
+                        (*node)->left = NULL;
+                    }
+                    else
+                    {
+                        free(node_neutral);
+                        node_neutral = NULL;
+                        (*node)->right = NULL;
+                    }
+
+                    if (*node == tree->root)
+                    {
+                        tree->root = node_insignificant;
+                    }
+                    else
+                    {
+                        if ((*node) == (*node)->parent->left)
+                        {
+                            printf("OK2\n");
+                            (*node)->parent->left = node_insignificant;
+                            printf("%p \n", node_insignificant);
+                            printf("%p %p \n", (*node)->parent->left, (*node)->parent->right);
+                        }
+                        else if ((*node) == (*node)->parent->right)
+                        {
+                            (*node)->parent->right = node_insignificant;
+                        }  
+                        node_insignificant->parent = (*node)->parent;
+                    }
+                    printf("%p \n", node_insignificant);
+                    printf("%p %p \n", (*node)->parent->left, (*node)->parent->right);
+                    free(*node);
+                    *node = NULL;
+                    tree->num_of_el -= 2;
+                    return err;
+
+                default:
+                    break;
+            }
+        }
+    }
+    CALCULATION_TREE_DUMP(tree);
+
+    RemovingNeutralElementsRecursive(tree, &(*node)->left);
+    RemovingNeutralElementsRecursive(tree, &(*node)->right);
+
+    return err;
+}
+
+bool is_number(const char *node_value)
+{    
+    char *endptr;
+    strtod(node_value, &endptr);
+    
+    return (*endptr == '\0' && endptr != node_value);
+}
+
+bool is_a_specific_number(double value, int number)
 {
     double e = 1e-50;
-    if (atof(node_value) < e && atof(node_value) > -e)
-        return false;
-    return true;
+    //printf("%lf %lf %lf\n", e + (double)number, -e + (double)number, value);
+    if (value <= e + (double)number &&  value >= -e + (double)number)
+        return true;
+    return false;
 }
 
 size_t return_num_of_bytes_in_file(int fd1)
