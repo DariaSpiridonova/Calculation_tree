@@ -519,12 +519,10 @@ Calculation_Tree_Errors NodeFromFileInit(calculation_tree *tree, char **position
 
     char *node_value = NULL;
     node_value = strdup(*position);
-    printf("node_value = %s\n", node_value);
     bool value_found = false;
 
     if (is_number(node_value)) 
     {
-        printf("******node_value = %s\n", node_value);
         (*node)->type = NUM_TYPE;
         (*node)->value.number = atof(node_value);
         value_found = true;
@@ -534,12 +532,10 @@ Calculation_Tree_Errors NodeFromFileInit(calculation_tree *tree, char **position
     {
         for (int i = 0; i < NUM_OF_VARIABLES; i++)
         {
-            printf("%s\n", variables_buffer[1]);
             if (!strcmp(node_value, variables_buffer[i]))
             {
                 (*node)->type = VAR_TYPE;
                 (*node)->value.variable = (var_t)i;
-                printf("node.value = %s\n\n", variables_buffer[(*node)->value.variable]);
                 value_found = true;
                 break;
             }
@@ -551,7 +547,6 @@ Calculation_Tree_Errors NodeFromFileInit(calculation_tree *tree, char **position
             {
                 (*node)->type = OP_TYPE;
                 (*node)->value.operation = (operation_t)i;
-                printf("node.value = %s\n\n", operations_buffer[(*node)->value.operation]);
                 value_found = true;
                 break;
             }
@@ -562,7 +557,6 @@ Calculation_Tree_Errors NodeFromFileInit(calculation_tree *tree, char **position
 
     if (!value_found) 
     {
-        printf("ERROR\n");
         return NON_EXISTENT_VALUE;
     }
 
@@ -717,7 +711,7 @@ Calculation_Tree_Errors RemovingNeutralElements(calculation_tree *tree)
     do
     {
         number_of_elements = tree->num_of_el;
-        RemovingNeutralElementsRecursive(tree, &(tree->root));
+        RemovingNeutralElementsRecursive(tree, tree->root, &err);
         CALCULATION_TREE_DUMP(tree);
     }
     while (number_of_elements != tree->num_of_el);
@@ -728,182 +722,188 @@ Calculation_Tree_Errors RemovingNeutralElements(calculation_tree *tree)
     return err;
 }
 
-Calculation_Tree_Errors RemovingNeutralElementsRecursive(calculation_tree *tree, node_t **node)
+static node_t *SimplifyCaseZero(calculation_tree *tree, node_t * node, node_t *zero_node, node_t *sub_node, Calculation_Tree_Errors *err);
+static node_t *SimplifyCaseOne(calculation_tree *tree, node_t * node, node_t *one_node, node_t *sub_node);
+static node_t *Simplify(calculation_tree *tree, node_t *node, Calculation_Tree_Errors *err);
+
+node_t *SimplifyCaseZero(calculation_tree *tree, node_t * node, node_t *zero_node, node_t *sub_node, Calculation_Tree_Errors *err)
 {
-    static Calculation_Tree_Errors err = NO_ERROR;
+    assert(zero_node);
 
-    if (err) return err;
-
-    if (*node == NULL)
-        return err;
-
-    if (*node != tree->root) printf("%p %p \n", (*node)->parent->left, (*node)->parent->right);
-
-    if ((*node)->type == OP_TYPE && ((*node)->left->type == NUM_TYPE || (*node)->right->type == NUM_TYPE))
+    printf("OP_TYPE = %s\n", operations_buffer[node->value.operation]);
+    switch(node->value.operation)
     {
-        printf("OP_TYPE = %s\n", operations_buffer[(*node)->value.operation]);
-        printf("(*node)->left->type = %s\n", type_buffer[(*node)->left->type]);
-        printf("(*node)->right->type = %s\n", type_buffer[(*node)->right->type]);
-        node_t *node_neutral = NULL, *node_insignificant = NULL;
-        if ((*node)->right->type == NUM_TYPE && is_a_specific_number((*node)->right->value.number, 0))
-        {
-            printf("is_a_specific_number((*node)->right->value.number, 0)\n");
-            node_neutral = (*node)->right;
-            node_insignificant = (*node)->left;
-        }
-            
-        else if ((*node)->left->type == NUM_TYPE && is_a_specific_number((*node)->left->value.number, 0))
-        {
-            printf("is_a_specific_number((*node)->left->value.number, 0)\n");
-            node_neutral = (*node)->left;
-            node_insignificant = (*node)->right;
-        }
 
-        if (node_neutral != NULL)
-        {
-            printf("OP_TYPE = %s\n", operations_buffer[(*node)->value.operation]);
-            switch((*node)->value.operation)
+        case ADD:
+        case SUB:
+            free(zero_node);
+            zero_node = NULL;
+
+            if (node == tree->root)
             {
-
-                case ADD:
-                case SUB:
-                    if (node_neutral == (*node)->left)
-                    {
-                        free(node_neutral);
-                        node_neutral = NULL;
-                        (*node)->left = NULL;
-                        (*node)->type = (*node)->right->type;
-                        (*node)->value = node_insignificant->value;
-                        free(node_insignificant);
-                        node_insignificant = NULL;
-                        (*node)->right = NULL;
-                    }
-                    else
-                    {
-                        free(node_neutral);
-                        node_neutral = NULL;
-                        (*node)->right = NULL;
-                        (*node)->type = (*node)->left->type;
-                        (*node)->value = node_insignificant->value;
-                        free(node_insignificant);
-                        node_insignificant = NULL;
-                        (*node)->left = NULL;
-                    }
-
-                    tree->num_of_el -= 2;
-                    return err;
-
-                case DIV:
-                    if (node_neutral == (*node)->right) 
-                    {
-                        err = DIVISION_BY_ZERO_IS_UNACCEPTABLE;
-                        return err;
-                    }
-                    [[fallthrough]];
-
-                case MUL:
-                    (*node)->type = NUM_TYPE;
-                    (*node)->value.number = 0;
-                    free(node_neutral);
-                    node_neutral = NULL;
-                    CalculationTreeDestroyRecursive(tree, &(node_insignificant));
-                    (*node)->left = NULL;
-                    (*node)->right = NULL;
-                    tree->num_of_el--;
-                    printf("num_of_el = %zd\n", tree->num_of_el);
-                    return err;
-
-                default:
-                    break;
+                tree->root = sub_node;
+                sub_node->parent = NULL;
             }
-        }
 
-        node_neutral = NULL;
-        node_insignificant = NULL;
-        if (is_a_specific_number((*node)->right->value.number, 1)) printf("YES\n");
-        if ((*node)->right->type == NUM_TYPE && is_a_specific_number((*node)->right->value.number, 1))
-        {
-            node_neutral = (*node)->right;
-            node_insignificant = (*node)->left;
-        }
-            
-        if ((*node)->left->type == NUM_TYPE && is_a_specific_number((*node)->left->value.number, 1))
-        {
-            node_neutral = (*node)->left;
-            node_insignificant = (*node)->right;
-        }
-
-        if (node_neutral != NULL)
-        {
-            printf("We are in 1 case\n*\n*\n*\n*\n\n\n");
-            printf("OP_TYPE = %s\n", operations_buffer[(*node)->value.operation]);
-             printf("%p \n", node_insignificant);
-              printf("%p \n", (*node)->right);
-             printf("%p \n", (*node)->parent->right);
-             printf("%p \n", (*node)->parent->left);
-              
-            switch((*node)->value.operation)
+            else if (node->parent->left == node)
             {
-                
-                case DIV:
-                    if (node_neutral == (*node)->left) 
-                    {
-                        break;
-                    }
-                    [[fallthrough]];
-
-                case MUL:
-                    if (node_neutral == (*node)->left)
-                    {
-                        printf("OK1\n");
-                        free(node_neutral);
-                        node_neutral = NULL;
-                        (*node)->left = NULL;
-                    }
-                    else
-                    {
-                        free(node_neutral);
-                        node_neutral = NULL;
-                        (*node)->right = NULL;
-                    }
-
-                    if (*node == tree->root)
-                    {
-                        tree->root = node_insignificant;
-                    }
-                    else
-                    {
-                        if ((*node) == (*node)->parent->left)
-                        {
-                            printf("OK2\n");
-                            (*node)->parent->left = node_insignificant;
-                            printf("%p \n", node_insignificant);
-                            printf("%p %p \n", (*node)->parent->left, (*node)->parent->right);
-                        }
-                        else if ((*node) == (*node)->parent->right)
-                        {
-                            (*node)->parent->right = node_insignificant;
-                        }  
-                        node_insignificant->parent = (*node)->parent;
-                    }
-                    printf("%p \n", node_insignificant);
-                    printf("%p %p \n", (*node)->parent->left, (*node)->parent->right);
-                    free(*node);
-                    *node = NULL;
-                    tree->num_of_el -= 2;
-                    return err;
-
-                default:
-                    break;
+                sub_node->parent = node->parent;
+                node->parent->left = sub_node;
             }
-        }
+
+            else if (node->parent->right == node)
+            {
+                sub_node->parent = node->parent;
+                node->parent->right = sub_node;
+            }
+
+            free(node);
+            node = NULL;
+            
+            tree->num_of_el -= 2;
+            return sub_node;
+
+        case DIV:
+            if (zero_node == node->right) 
+            {
+                *err = DIVISION_BY_ZERO_IS_UNACCEPTABLE;
+                return sub_node;
+            }
+            [[fallthrough]];
+
+        case MUL:
+            node->type = NUM_TYPE;
+            node->value.number = 0;
+            free(zero_node);
+            zero_node = NULL;
+            CalculationTreeDestroyRecursive(tree, &(sub_node));
+            node->left = NULL;
+            node->right = NULL;
+            tree->num_of_el--;
+            return sub_node;
+
+        default:
+            break;
     }
+
+    return sub_node;
+}
+
+node_t *SimplifyCaseOne(calculation_tree *tree, node_t * node, node_t *one_node, node_t *sub_node)
+{
+    assert(one_node);
+
+    // printf("We are in 1 case\n*\n*\n*\n*\n\n\n");
+    // printf("OP_TYPE = %s\n", operations_buffer[node->value.operation]);
+    // printf("%p \n", sub_node);
+    // printf("%p \n", node->right);
+    // printf("%p \n", node->parent->right);
+    // printf("%p \n", node->parent->left);
+        
+    switch(node->value.operation)
+    {
+        
+        case DIV:
+            if (one_node == node->left) 
+            {
+                break;
+            }
+            [[fallthrough]];
+
+        case MUL:
+            free(one_node);
+            one_node = NULL;
+
+            if (node == tree->root)
+            {
+                tree->root = sub_node;
+                sub_node->parent = NULL;
+            }
+
+            else if (node->parent->left == node)
+            {
+                sub_node->parent = node->parent;
+                node->parent->left = sub_node;
+            }
+
+            else if (node->parent->right == node)
+            {
+                sub_node->parent = node->parent;
+                node->parent->right = sub_node;
+            }
+
+            free(node);
+            node = NULL;
+            
+            tree->num_of_el -= 2;
+            return sub_node;
+
+        default:
+            break;
+    }
+    return node;
+}
+
+node_t *Simplify(calculation_tree *tree, node_t *node, Calculation_Tree_Errors *err)
+{
+    if (node->type != OP_TYPE || 
+        (node->left->type != NUM_TYPE && node->right->type != NUM_TYPE)) {
+        return node;
+    }
+
+    printf("OP_TYPE = %s\n", operations_buffer[node->value.operation]);
+
+    printf("(*node)->left ->type = %s\n", type_buffer[node->left->type]);
+    printf("(*node)->right->type = %s\n", type_buffer[node->right->type]);
+
+    if (node->right->type == NUM_TYPE && is_a_specific_number(node->right->value.number, 0))
+    {
+        return SimplifyCaseZero(tree, node, node->right, node->left, err);
+    } 
+    if (node->left->type == NUM_TYPE && is_a_specific_number(node->left->value.number, 0))
+    {
+        return SimplifyCaseZero(tree, node, node->left, node->right, err);
+    }
+
+    if (node->right->type == NUM_TYPE && is_a_specific_number(node->right->value.number, 1))
+    {
+        return SimplifyCaseOne(tree, node, node->right, node->left);
+    }   
+    if (node->left->type == NUM_TYPE && is_a_specific_number(node->left->value.number, 1))
+    {
+        return SimplifyCaseOne(tree, node, node->left, node->right);
+    }
+
+    return node;
+}
+
+node_t *RemovingNeutralElementsRecursive(calculation_tree *tree, node_t *node, Calculation_Tree_Errors *err)
+{
+    assert(tree);
+    
+    if (node == NULL)
+        return NULL;
+
+    if (*err) 
+        return node;
+
+    if (node != tree->root) {
+        printf("node != tree->root: node->parent-> left = %p"
+                                   "node->parent->right = %p" "\n", 
+                                   node->parent->left,
+                                   node->parent->right);
+    }
+
+    if (node != NULL)
+    {
+        RemovingNeutralElementsRecursive(tree, node->left, err);
+        RemovingNeutralElementsRecursive(tree, node->right, err);
+    }
+
+    node = Simplify(tree, node, err);
     CALCULATION_TREE_DUMP(tree);
 
-    RemovingNeutralElementsRecursive(tree, &(*node)->left);
-    RemovingNeutralElementsRecursive(tree, &(*node)->right);
-
-    return err;
+    return node;
 }
 
 bool is_number(const char *node_value)
@@ -917,7 +917,7 @@ bool is_number(const char *node_value)
 bool is_a_specific_number(double value, int number)
 {
     double e = 1e-50;
-    //printf("%lf %lf %lf\n", e + (double)number, -e + (double)number, value);
+    
     if (value <= e + (double)number &&  value >= -e + (double)number)
         return true;
     return false;

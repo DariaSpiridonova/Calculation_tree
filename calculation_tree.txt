@@ -1,1 +1,1 @@
-( * ( x nil nil ) ( + ( y nil nil ) ( 6.000000 nil nil ) ) )
+( + ( 0 nil nil ) ( * ( y nil nil ) ( 2 nil nil ) ) )

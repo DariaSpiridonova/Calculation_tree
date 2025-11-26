@@ -140,7 +140,7 @@ void CreateGraph(const calculation_tree *tree, const char *gvfile_name);
 Calculation_Tree_Errors ConstantsConvolution(calculation_tree *tree);
 void ConstantsConvolutionRecursive(calculation_tree *tree, node_t **node);
 Calculation_Tree_Errors RemovingNeutralElements(calculation_tree *tree);
-Calculation_Tree_Errors RemovingNeutralElementsRecursive(calculation_tree *tree, node_t **node);
+node_t *RemovingNeutralElementsRecursive(calculation_tree *tree, node_t *node, Calculation_Tree_Errors *err);
 bool is_a_specific_number(double value, int number);
 
 Calculation_Tree_Errors SaveTreeToFile(calculation_tree *tree, const char *name_of_file);

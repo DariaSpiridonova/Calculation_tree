@@ -17,7 +17,7 @@ int main()
         PrintError(err);
         return 3;
     }
-        
+
     CALCULATION_TREE_DUMP(&akinator_tree);
 
     if ((err = RemovingNeutralElements(&akinator_tree)))
