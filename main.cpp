@@ -20,16 +20,10 @@ int main()
 
     CALCULATION_TREE_DUMP(&akinator_tree);
 
-    if ((err = RemovingNeutralElements(&akinator_tree)))
+    if ((err = OptimizationFunction(&akinator_tree)))
     {
         PrintError(err);
         return 5;
-    }
-
-    if ((err = ConstantsConvolution(&akinator_tree)))
-    {
-        PrintError(err);
-        return 4;
     }    
 
     if ((err = SaveTreeToFile(&akinator_tree, "calculation_tree_expression.txt")))

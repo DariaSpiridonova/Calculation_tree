@@ -604,6 +604,32 @@ static void InitNonNumNode(node_t **node, bool *value_found, char *node_value)
     }
 }
 
+Calculation_Tree_Errors OptimizationFunction(calculation_tree *tree)
+{
+    ASSERTS(tree);
+
+    Calculation_Tree_Errors err = NO_ERROR;
+    if ((err = CalculationTreeVerify(tree)))
+        return err;
+
+    ssize_t number_of_elements = tree->num_of_el;
+
+    do
+    {
+        number_of_elements = tree->num_of_el;
+        err = ConstantsConvolution(tree);
+        err = RemovingNeutralElements(tree);
+        if (err) return err;
+        CALCULATION_TREE_DUMP(tree);
+    }
+    while (number_of_elements != tree->num_of_el);
+
+    if ((err = CalculationTreeVerify(tree)))
+        return err;
+
+    return err;
+}
+
 Calculation_Tree_Errors ConstantsConvolution(calculation_tree *tree)
 {
     ASSERTS(tree);
@@ -817,7 +843,7 @@ node_t *SimplifyCaseZero(calculation_tree *tree, node_t * node, node_t *zero_nod
             node->value.number = 0;
             free(zero_node);
             zero_node = NULL;
-            
+
             CalculationTreeDestroyRecursive(tree, &(sub_node));
             node->left = NULL;
             node->right = NULL;

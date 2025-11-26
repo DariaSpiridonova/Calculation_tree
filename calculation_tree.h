@@ -137,6 +137,7 @@ void LinkEdges(FILE *fp, node_t *node);
 void CreateGraph(const calculation_tree *tree, const char *gvfile_name);
 
 // Optimization
+Calculation_Tree_Errors OptimizationFunction(calculation_tree *tree);
 Calculation_Tree_Errors ConstantsConvolution(calculation_tree *tree);
 void ConstantsConvolutionRecursive(calculation_tree *tree, node_t **node);
 Calculation_Tree_Errors RemovingNeutralElements(calculation_tree *tree);
