@@ -1,5 +1,18 @@
 #include "calculation_tree.h"
 
+static bool RecognizingStartPosition(calculation_tree *tree, char **position, node_t **node, node_t *parent);
+static bool RecognizingEndPosition(char **position);
+static void InitNumNode(node_t **node, bool *value_found, char *node_value);
+static void InitNonNumNode(node_t **node, bool *value_found, char *node_value);
+static bool IsNumSons(calculation_tree *tree, node_t **node);
+static bool IsNumOnlySon(calculation_tree *tree, node_t **node);
+
+static node_t *SimplifyCaseZero(calculation_tree *tree, node_t * node, node_t *zero_node, node_t *sub_node, Calculation_Tree_Errors *err);
+static node_t *SimplifyCaseOne(calculation_tree *tree, node_t * node, node_t *one_node, node_t *sub_node);
+static node_t *Simplify(calculation_tree *tree, node_t *node, Calculation_Tree_Errors *err);
+
+
+
 #undef ENABLE_THE_VERIFIER
 Calculation_Tree_Errors CalculationTreeInit(calculation_tree *tree, const char *logfile_name)
 {
@@ -349,7 +362,6 @@ void SaveTreeToFileRecursive(FILE *fp, node_t *node)
 {
     if (node == NULL)
     {
-        //fprintf(fp, "nil ");
         return;
     }
 
@@ -459,39 +471,17 @@ char *ReadNodeFromBuffer(calculation_tree *tree, char **position, node_t **node,
     #endif
 
     SkipSpaces(position);
-    printf("1. %c\n", **position);
 
-    if (**position == '(')
-    {
-        (*position)++;
-        SkipSpaces(position);
-
-        printf("2. %c\n", **position);
-
-        NodeFromFileInit(tree, position, node, parent);
-
-        *position = strchr(*position, '\0') + 1;
-    }
-
-    else if (**position == 'n' && *(*position + 1) == 'i' && *(*position + 2) == 'l' && *(*position + 3) == ' ')
-    {
-        printf("3. %c\n", **position);
-        SkipSpaces(position);
-
-        *position += 3;
+    if (RecognizingStartPosition(tree, position, node, parent)) 
         return *position;
-    }
 
     *position = ReadNodeFromBuffer(tree, position, &((*node)->left), *node);
     *position = ReadNodeFromBuffer(tree, position, &((*node)->right), *node);
 
     SkipSpaces(position);
-    printf("4. %c\n", **position);
-    if (**position == ')')
-    {
-        (*position)++;
+
+    if (RecognizingEndPosition(position)) 
         return *position;
-    }
 
     #ifdef ENABLE_THE_VERIFIER
     if ((err = CalculationTreeVerify(tree)))
@@ -501,6 +491,40 @@ char *ReadNodeFromBuffer(calculation_tree *tree, char **position, node_t **node,
     #endif
 
     return *position;
+}
+
+static bool RecognizingStartPosition(calculation_tree *tree, char **position, node_t **node, node_t *parent)
+{
+    if (**position == '(')
+    {
+        (*position)++;
+        SkipSpaces(position);
+
+        NodeFromFileInit(tree, position, node, parent);
+
+        *position = strchr(*position, '\0') + 1;
+    }
+
+    else if (**position == 'n' && *(*position + 1) == 'i' && *(*position + 2) == 'l' && *(*position + 3) == ' ')
+    {
+        SkipSpaces(position);
+
+        *position += 3;
+        return true;
+    }
+
+    return false;
+}
+
+static bool RecognizingEndPosition(char **position)
+{
+    if (**position == ')')
+    {
+        (*position)++;
+        return true;
+    }
+
+    return false;
 }
 
 Calculation_Tree_Errors NodeFromFileInit(calculation_tree *tree, char **position, node_t **node, node_t *parent)
@@ -523,34 +547,12 @@ Calculation_Tree_Errors NodeFromFileInit(calculation_tree *tree, char **position
 
     if (is_number(node_value)) 
     {
-        (*node)->type = NUM_TYPE;
-        (*node)->value.number = atof(node_value);
-        value_found = true;
+        InitNumNode(node, &value_found, node_value);
     }
 
     else
     {
-        for (int i = 0; i < NUM_OF_VARIABLES; i++)
-        {
-            if (!strcmp(node_value, variables_buffer[i]))
-            {
-                (*node)->type = VAR_TYPE;
-                (*node)->value.variable = (var_t)i;
-                value_found = true;
-                break;
-            }
-        }
-
-        for (int i = 0; i < NUM_OF_OPERATIONS; i++)
-        {
-            if (!strcmp(node_value, operations_buffer[i]))
-            {
-                (*node)->type = OP_TYPE;
-                (*node)->value.operation = (operation_t)i;
-                value_found = true;
-                break;
-            }
-        }
+        InitNonNumNode(node, &value_found, node_value);
     }
 
     free(node_value);
@@ -568,6 +570,38 @@ Calculation_Tree_Errors NodeFromFileInit(calculation_tree *tree, char **position
         return err;
 
     return err;
+}
+
+static void InitNumNode(node_t **node, bool *value_found, char *node_value)
+{
+    (*node)->type = NUM_TYPE;
+    (*node)->value.number = atof(node_value);
+    *value_found = true;
+}
+
+static void InitNonNumNode(node_t **node, bool *value_found, char *node_value)
+{
+    for (int i = 0; i < NUM_OF_VARIABLES; i++)
+    {
+        if (!strcmp(node_value, variables_buffer[i]))
+        {
+            (*node)->type = VAR_TYPE;
+            (*node)->value.variable = (var_t)i;
+            *value_found = true;
+            break;
+        }
+    }
+
+    for (int i = 0; i < NUM_OF_OPERATIONS; i++)
+    {
+        if (!strcmp(node_value, operations_buffer[i]))
+        {
+            (*node)->type = OP_TYPE;
+            (*node)->value.operation = (operation_t)i;
+            *value_found = true;
+            break;
+        }
+    }
 }
 
 Calculation_Tree_Errors ConstantsConvolution(calculation_tree *tree)
@@ -599,103 +633,115 @@ void ConstantsConvolutionRecursive(calculation_tree *tree, node_t **node)
     if (*node == NULL)
         return;
 
-    if ((*node)->type == OP_TYPE && (*node)->left->type == NUM_TYPE && (*node)->right->type == NUM_TYPE)
-    {
-        (*node)->type = NUM_TYPE;
-        switch ((*node)->value.operation)
-        {
-            case NO_OP:
-                break;
-
-            case ADD:
-                (*node)->value.number = (*node)->left->value.number + (*node)->right->value.number;
-                break;
-
-            case SUB:
-                (*node)->value.number = (*node)->left->value.number - (*node)->right->value.number;
-                break;
-
-            case MUL:
-                (*node)->value.number = (*node)->left->value.number * (*node)->right->value.number;
-                break;
-
-            case DIV:
-                (*node)->value.number = (*node)->left->value.number / (*node)->right->value.number;
-                break;
-
-            case DEG:
-                (*node)->value.number = pow((*node)->left->value.number, (*node)->right->value.number);
-                break;
-
-            case LOG:
-                (*node)->value.number = log((*node)->left->value.number) / log((*node)->right->value.number);
-                break;
-                
-            default:
-                break;
-        }
-
-        free((*node)->left); 
-        (*node)->left = NULL;
-        free((*node)->right); 
-        (*node)->right = NULL;
-
-        tree->num_of_el -= 2;
-
+    if (IsNumSons(tree, node))
         return;
-    }
 
-    else if ((*node)->type == OP_TYPE && (((*node)->left->type == NUM_TYPE && (*node)->right == NULL) || ((*node)->right->type == NUM_TYPE && (*node)->left == NULL)))
-    {
-        (*node)->type = NUM_TYPE;
-
-        node_t *node_num = (*node)->left;
-
-        if ((*node)->left == NULL) 
-            node_num = (*node)->right;
-
-        switch ((*node)->value.operation)
-        {
-            case SIN:
-                (*node)->value.number = sin(node_num->value.number);
-                break;
-
-            case COS:
-                (*node)->value.number = cos(node_num->value.number);
-                break;
-
-            case TG:
-                (*node)->value.number = tan(node_num->value.number);
-                break;
-
-            case CTG:
-                (*node)->value.number = 1 / tan(node_num->value.number);
-                break;
-                
-            default:
-                void((*node)->value.operation);
-                break;
-        }
-
-        if ((*node)->left != NULL) 
-        {
-            free((*node)->left); 
-            (*node)->left = NULL;
-        }
-        else if ((*node)->right != NULL) 
-        {
-            free((*node)->right); 
-            (*node)->right = NULL;
-        }
-        tree->num_of_el--;
-
+    if (IsNumOnlySon(tree, node))
         return;
-    }
-    
+
     ConstantsConvolutionRecursive(tree, &(*node)->left);
     ConstantsConvolutionRecursive(tree, &(*node)->right);
 
     return;
+}
+
+static bool IsNumSons(calculation_tree *tree, node_t **node)
+{
+    if ((*node)->type != OP_TYPE || (*node)->left->type != NUM_TYPE || (*node)->right->type != NUM_TYPE)
+        return false;
+
+    (*node)->type = NUM_TYPE;
+    switch ((*node)->value.operation)
+    {
+        case NO_OP:
+            break;
+
+        case ADD:
+            (*node)->value.number = (*node)->left->value.number + (*node)->right->value.number;
+            break;
+
+        case SUB:
+            (*node)->value.number = (*node)->left->value.number - (*node)->right->value.number;
+            break;
+
+        case MUL:
+            (*node)->value.number = (*node)->left->value.number * (*node)->right->value.number;
+            break;
+
+        case DIV:
+            (*node)->value.number = (*node)->left->value.number / (*node)->right->value.number;
+            break;
+
+        case DEG:
+            (*node)->value.number = pow((*node)->left->value.number, (*node)->right->value.number);
+            break;
+
+        case LOG:
+            (*node)->value.number = log((*node)->left->value.number) / log((*node)->right->value.number);
+            break;
+            
+        default:
+            break;
+    }
+
+    free((*node)->left); 
+    (*node)->left = NULL;
+    free((*node)->right); 
+    (*node)->right = NULL;
+
+    tree->num_of_el -= 2;
+
+    return true;
+}
+
+static bool IsNumOnlySon(calculation_tree *tree, node_t **node)
+{
+    if ((*node)->type != OP_TYPE || (((*node)->left->type != NUM_TYPE || (*node)->right != NULL) && ((*node)->right->type != NUM_TYPE || (*node)->left != NULL)))
+        return false;
+
+    (*node)->type = NUM_TYPE;
+
+    node_t *node_num = (*node)->left;
+
+    if ((*node)->left == NULL) 
+        node_num = (*node)->right;
+
+    switch ((*node)->value.operation)
+    {
+        case SIN:
+            (*node)->value.number = sin(node_num->value.number);
+            break;
+
+        case COS:
+            (*node)->value.number = cos(node_num->value.number);
+            break;
+
+        case TG:
+            (*node)->value.number = tan(node_num->value.number);
+            break;
+
+        case CTG:
+            (*node)->value.number = 1 / tan(node_num->value.number);
+            break;
+            
+        default:
+            void((*node)->value.operation);
+            break;
+    }
+
+    if ((*node)->left != NULL) 
+    {
+        free((*node)->left); 
+        (*node)->left = NULL;
+    }
+    else if ((*node)->right != NULL) 
+    {
+        free((*node)->right); 
+        (*node)->right = NULL;
+    }
+    tree->num_of_el--;
+
+    return true;
 }
 
 Calculation_Tree_Errors RemovingNeutralElements(calculation_tree *tree)
@@ -722,15 +768,10 @@ Calculation_Tree_Errors RemovingNeutralElements(calculation_tree *tree)
     return err;
 }
 
-static node_t *SimplifyCaseZero(calculation_tree *tree, node_t * node, node_t *zero_node, node_t *sub_node, Calculation_Tree_Errors *err);
-static node_t *SimplifyCaseOne(calculation_tree *tree, node_t * node, node_t *one_node, node_t *sub_node);
-static node_t *Simplify(calculation_tree *tree, node_t *node, Calculation_Tree_Errors *err);
-
 node_t *SimplifyCaseZero(calculation_tree *tree, node_t * node, node_t *zero_node, node_t *sub_node, Calculation_Tree_Errors *err)
 {
     assert(zero_node);
 
-    printf("OP_TYPE = %s\n", operations_buffer[node->value.operation]);
     switch(node->value.operation)
     {
 
@@ -776,6 +817,7 @@ node_t *SimplifyCaseZero(calculation_tree *tree, node_t * node, node_t *zero_nod
             node->value.number = 0;
             free(zero_node);
             zero_node = NULL;
+            
             CalculationTreeDestroyRecursive(tree, &(sub_node));
             node->left = NULL;
             node->right = NULL;
@@ -792,14 +834,7 @@ node_t *SimplifyCaseZero(calculation_tree *tree, node_t * node, node_t *zero_nod
 node_t *SimplifyCaseOne(calculation_tree *tree, node_t * node, node_t *one_node, node_t *sub_node)
 {
     assert(one_node);
-
-    // printf("We are in 1 case\n*\n*\n*\n*\n\n\n");
-    // printf("OP_TYPE = %s\n", operations_buffer[node->value.operation]);
-    // printf("%p \n", sub_node);
-    // printf("%p \n", node->right);
-    // printf("%p \n", node->parent->right);
-    // printf("%p \n", node->parent->left);
-        
+   
     switch(node->value.operation)
     {
         
