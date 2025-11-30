@@ -2,7 +2,7 @@ FLAGS = -lncurses -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggre
 
 CXX = g++
 
-SOURCES =  main.cpp calculation_tree_functions.cpp  
+SOURCES =  main.cpp calculation_tree_functions.cpp differentiation.cpp
 OBJECTS = $(patsubst %.cpp, %.o, $(SOURCES))
 
 all: calculation_tree.exe

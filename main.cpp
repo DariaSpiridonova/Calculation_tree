@@ -1,41 +1,71 @@
 #include "calculation_tree.h"
+#include "differentiation.h"
 
 int main()
 {
-    calculation_tree akinator_tree;
+    calculation_tree calculation_tree_;
+    calculation_tree calculation_tree_differential_;
 
     Calculation_Tree_Errors err = NO_ERROR;
 
-    if ((err = CalculationTreeInit(&akinator_tree, "logfile_for_tree1.htm")))
+    if ((err = CalculationTreeInit(&calculation_tree_, "logfile_for_tree1.htm")))
     {
         PrintError(err);
-        return 2;
+        return 1;
     }
 
-    if ((err = ReadTreeFromFile(&akinator_tree, "calculation_tree.txt")))
+    // if ((err = CalculationTreeInit(&calculation_tree_differential_, "logfile_for_tree_differential.htm")))
+    // {
+    //     PrintError(err);
+    //     return 2;
+    // }
+
+    if ((err = ReadTreeFromFile(&calculation_tree_, "calculation_tree.txt")))
     {
         PrintError(err);
         return 3;
     }
 
-    CALCULATION_TREE_DUMP(&akinator_tree);
+    CALCULATION_TREE_DUMP(&calculation_tree_);
 
-    if ((err = OptimizationFunction(&akinator_tree)))
+    if ((err = OptimizationFunction(&calculation_tree_)))
     {
         PrintError(err);
         return 5;
-    }    
+    }  
 
-    if ((err = SaveTreeToFile(&akinator_tree, "calculation_tree_expression.txt")))
+    if ((err = SaveTreeToFile(&calculation_tree_, "calculation_tree_expression.txt")))
     {
         PrintError(err);
         return 6;
     }
 
-    if ((err = CalculationTreeDestroy(&akinator_tree)))
+    if ((err = MakeDifferentiationTree(&calculation_tree_differential_, "logfile_for_tree_differential.htm", &calculation_tree_, X)))
     {
         PrintError(err);
         return 7;
+    }
+
+    CALCULATION_TREE_DUMP(&calculation_tree_differential_);
+
+    if ((err = OptimizationFunction(&calculation_tree_differential_)))
+    {
+        PrintError(err);
+        return 5;
+    }
+
+    CALCULATION_TREE_DUMP(&calculation_tree_differential_);
+
+    if ((err = CalculationTreeDestroy(&calculation_tree_)))
+    {
+        PrintError(err);
+        return 8;
+    }
+
+    if ((err = CalculationTreeDestroy(&calculation_tree_differential_)))
+    {
+        PrintError(err);
+        return 9;
     }
 
     return 0;

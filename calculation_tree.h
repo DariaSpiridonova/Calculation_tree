@@ -130,6 +130,8 @@ Calculation_Tree_Errors CalculationTreeDestroyRecursive(calculation_tree *tree, 
 void CalculationTreeDump(calculation_tree *tree, const char *file, int line);
 void DumpToConsole(const calculation_tree *tree, const char *file, int line, ssize_t *rank);
 void DumpToLogfile(const calculation_tree *tree, const char *logfile_name, const char *gvfile_name, ssize_t *rank);
+void DumpToTexFile(const calculation_tree *tree, const char *texfile_name);
+char *DumpToTexFileRecursive(node_t *node, FILE *tex);
 void Dump(FILE *fp, const calculation_tree *tree, ssize_t *rank);
 void ShowTree(FILE *fp, node_t *node, ssize_t *rank, ssize_t *cur_rank);
 void PrintEdges(FILE *fp, node_t *node);

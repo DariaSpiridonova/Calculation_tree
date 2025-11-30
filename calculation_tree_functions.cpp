@@ -166,7 +166,10 @@ void CalculationTreeDump(calculation_tree *tree, const char *file, int line)
 
     DumpToLogfile(tree, tree->file_name, gvfile_name, &rank);
 
-    //DumpToTexFile(tree, "calculation_tree.tex");
+    char texfile_name[SIZE_OF_NAME] = {0};
+    sprintf(texfile_name, "%s.tex", tree->file_name);
+
+    DumpToTexFile(tree, texfile_name);
 
     CreateGraph(tree, gvfile_name);
 }
@@ -177,10 +180,111 @@ void DumpToConsole(const calculation_tree *tree, const char *file, int line, ssi
     Dump(stdout, tree, rank);
 }
 
-// void DumpToTexFile(const calculation_tree *tree, const char *texfile_name)
-// {
+void DumpToTexFile(const calculation_tree *tree, const char *texfile_name)
+{
+    FILE *tex = fopen(texfile_name, "a");
 
-// }
+    if (!OpenFileSuccess(tex, texfile_name))
+    {
+        return;
+    }
+
+    char *expression = NULL;
+
+    fprintf(tex, "\\documentclass{article}\n");
+    fprintf(tex, "\\begin{document}\n");
+    
+    expression = DumpToTexFileRecursive(tree->root, tex);
+    printf("expression = %s\n", expression);
+    free(expression);
+
+    fprintf(tex, "\\end{document}\n\n\n\n");
+
+    char *command = (char *)calloc(strlen(texfile_name) + strlen("pdflatex -quiet ") + 1, sizeof(char));
+    
+    // Компилируем в PDF
+    snprintf(command, strlen(texfile_name) + strlen("pdflatex ") + 1, "pdflatex %s", texfile_name);
+    system(command);
+
+    free(command);
+
+    if (!CloseFileSuccess(tex, texfile_name))
+    {
+        return;
+    }
+}
+
+char *DumpToTexFileRecursive(node_t *node, FILE *tex)
+{
+    if (node == NULL) 
+        return NULL;
+
+    char *s1 = NULL, *s2 = NULL, *s3 = NULL;
+    
+    s1 = DumpToTexFileRecursive(node->left, tex);
+    if (s1 != NULL) printf("s1 = %s\n", s1);
+    s2 = DumpToTexFileRecursive(node->right, tex);
+    if (s2 != NULL) printf("s2 = %s\n", s2);
+
+    if (s1 == NULL && s2 == NULL)
+    {
+        if (node->type == NUM_TYPE)
+        {
+            printf("number = %lf\n", node->value.number);
+
+            char number[100] = {0};
+            sprintf(number, "%lf", node->value.number);
+            s3 = (char *)calloc(strlen(number) + 1, sizeof(char));
+            sprintf(s3, "%lf", node->value.number);
+            return s3;
+        }
+
+        else if (node->type == VAR_TYPE) 
+        {
+            printf("variable = %s\n", variables_buffer[node->value.variable]);
+
+            s3 = (char *)calloc(2, sizeof(char));
+            sprintf(s3, "%s", variables_buffer[node->value.variable]);
+            return s3;
+        }   
+    }
+
+    else
+    {
+        printf("operation = %s\n", operations_buffer[node->value.operation]);
+        s3 = (char *)calloc(strlen(s1) + strlen(s2) + 12, sizeof(char));
+
+        switch (node->value.operation)
+        {
+            case ADD:
+            case SUB: 
+                sprintf(s3, "(%s %s %s)", s1, operations_buffer[node->value.operation], s2);
+                printf("s3 = %s\n", s3);
+                fprintf(tex, "\\[\n\\ %.*s\n\\]\n", (int)strlen(s3) - 2, s3 + 1);
+                break;
+
+            case MUL:
+                sprintf(s3, " (%s \\cdot %s) ", s1, s2);
+                fprintf(tex, "\\[\n\\ %s\n\\]\n", s3);
+                break;
+
+            case DIV:
+                sprintf(s3, "frac{%s}{%s}", s1, s2);
+                fprintf(tex, "\\[\n\\ %s\n\\]\n", s3);
+
+            default:
+                break;
+        }
+
+        free(s1);
+        s1 = NULL;
+        free(s2);
+        s2 = NULL;
+    }
+    
+    printf("s3 = %s\n", s3);
+    return s3;
+}
 
 void Dump(FILE *fp, const calculation_tree *tree, ssize_t *rank)
 {
@@ -801,8 +905,16 @@ node_t *SimplifyCaseZero(calculation_tree *tree, node_t * node, node_t *zero_nod
     switch(node->value.operation)
     {
 
-        case ADD:
         case SUB:
+            if (zero_node == node->left) 
+            {
+                node->left->value.number = -1;
+                node->value.operation = MUL;
+                return node;
+            }
+            [[fallthrough]];
+
+        case ADD:
             free(zero_node);
             zero_node = NULL;
 
