@@ -252,7 +252,13 @@ char *DumpToTexFileRecursive(node_t *node, FILE *tex)
     else
     {
         printf("operation = %s\n", operations_buffer[node->value.operation]);
-        s3 = (char *)calloc(strlen(s1) + strlen(s2) + 12, sizeof(char));
+
+        if      (s1 == NULL)
+            s3 = (char *)calloc(strlen(s2) + 12, sizeof(char));
+        else if (s2 == NULL)
+            s3 = (char *)calloc(strlen(s1) + 12, sizeof(char));
+        else
+            s3 = (char *)calloc(strlen(s1) + strlen(s2) + 12, sizeof(char));
 
         switch (node->value.operation)
         {
@@ -264,22 +270,62 @@ char *DumpToTexFileRecursive(node_t *node, FILE *tex)
                 break;
 
             case MUL:
-                sprintf(s3, " (%s \\cdot %s) ", s1, s2);
+                if (node->parent != NULL && (node->parent->value.operation == ADD || node->parent->value.operation == SUB || node->parent->value.operation == DIV))
+                    sprintf(s3, " %s \\cdot %s ", s1, s2);
+                else   
+                    sprintf(s3, " (%s \\cdot %s) ", s1, s2);
                 fprintf(tex, "\\[\n\\ %s\n\\]\n", s3);
                 break;
 
             case DIV:
-                sprintf(s3, "frac{%s}{%s}", s1, s2);
+                sprintf(s3, "\\frac{%s}{%s}", s1, s2);
                 fprintf(tex, "\\[\n\\ %s\n\\]\n", s3);
+                break;
+
+            case DEG:
+                sprintf(s3, "(%s)^{%s}", s1, s2);
+                fprintf(tex, "\\[\n\\ %s\n\\]\n", s3);
+                break;
+
+            case LOG:
+                sprintf(s3, "log_{%s}(%s)", s1, s2);
+                fprintf(tex, "\\[\n\\ %s\n\\]\n", s3);
+                break;
+
+            case SIN:
+                sprintf(s3, "sin(%s)", s2);
+                fprintf(tex, "\\[\n\\ %s\n\\]\n", s3);
+                break;
+
+            case COS:
+                sprintf(s3, "cos(%s)", s2);
+                fprintf(tex, "\\[\n\\ %s\n\\]\n", s3);
+                break;
+
+            case TG:
+                sprintf(s3, "tg(%s)", s2);
+                fprintf(tex, "\\[\n\\ %s\n\\]\n", s3);
+                break;
+
+            case CTG:
+                sprintf(s3, "ctg(%s)", s2);
+                fprintf(tex, "\\[\n\\ %s\n\\]\n", s3);
+                break;
 
             default:
                 break;
         }
 
-        free(s1);
-        s1 = NULL;
-        free(s2);
-        s2 = NULL;
+        if (s1 != NULL)
+        {   free(s1);
+            s1 = NULL;
+        }
+
+        if (s2 != NULL)
+        {
+            free(s2);
+            s2 = NULL;
+        }
     }
     
     printf("s3 = %s\n", s3);
@@ -777,7 +823,7 @@ void ConstantsConvolutionRecursive(calculation_tree *tree, node_t **node)
 
 static bool IsNumSons(calculation_tree *tree, node_t **node)
 {
-    if ((*node)->type != OP_TYPE || (*node)->left->type != NUM_TYPE || (*node)->right->type != NUM_TYPE)
+    if ((*node)->type != OP_TYPE || (*node)->left == NULL || (*node)->right == NULL || (*node)->left->type != NUM_TYPE || (*node)->right->type != NUM_TYPE)
         return false;
 
     (*node)->type = NUM_TYPE;
@@ -807,7 +853,7 @@ static bool IsNumSons(calculation_tree *tree, node_t **node)
             break;
 
         case LOG:
-            (*node)->value.number = log((*node)->left->value.number) / log((*node)->right->value.number);
+            (*node)->value.number = log((*node)->right->value.number) / log((*node)->left->value.number);
             break;
             
         default:
@@ -826,7 +872,7 @@ static bool IsNumSons(calculation_tree *tree, node_t **node)
 
 static bool IsNumOnlySon(calculation_tree *tree, node_t **node)
 {
-    if ((*node)->type != OP_TYPE || (((*node)->left->type != NUM_TYPE || (*node)->right != NULL) && ((*node)->right->type != NUM_TYPE || (*node)->left != NULL)))
+    if ((*node)->type != OP_TYPE || (*node)->right == NULL || (*node)->left != NULL || (*node)->right->type != NUM_TYPE)
         return false;
 
     (*node)->type = NUM_TYPE;
@@ -1019,8 +1065,11 @@ node_t *SimplifyCaseOne(calculation_tree *tree, node_t * node, node_t *one_node,
 
 node_t *Simplify(calculation_tree *tree, node_t *node, Calculation_Tree_Errors *err)
 {
+    if (node == NULL)
+        return NULL;
+
     if (node->type != OP_TYPE || 
-        (node->left->type != NUM_TYPE && node->right->type != NUM_TYPE)) {
+        ((node->left == NULL || node->left->type != NUM_TYPE) && (node->right == NULL || node->right->type != NUM_TYPE))) {
         return node;
     }
 
