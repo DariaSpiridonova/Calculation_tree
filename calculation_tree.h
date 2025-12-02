@@ -149,12 +149,22 @@ bool is_a_specific_number(double value, int number);
 Calculation_Tree_Errors SaveTreeToFile(calculation_tree *tree, const char *name_of_file);
 void SaveTreeToFileRecursive(FILE *fp, node_t *node);
 
+Calculation_Tree_Errors MakeTreeFromExpression(calculation_tree *calculation_tree, const char *logfile_name, const char *name_of_file_with_expression);
+node_t *BuildingATree(calculation_tree *calculation_tree, char **expression, Calculation_Tree_Errors *err);
+char *ReadExpressionFromFile(const char *name_of_file, Calculation_Tree_Errors *err);
+
 Calculation_Tree_Errors ReadTreeFromFile(calculation_tree *tree, const char *name_of_file);
 void SplitIntoParts(char *tree_buffer);
 char *ReadNodeFromBuffer(calculation_tree *tree, char **position, node_t **node, node_t *parent);
 Calculation_Tree_Errors NodeFromFileInit(calculation_tree *tree, char **position, node_t **node, node_t *parent);
 size_t return_num_of_bytes_in_file(int fd1);
 void SkipSpaces(char **position);
+
+node_t *NewNodeNumInit (calculation_tree *calculation_tree_differential_, double number, node_t *node_left, node_t *node_right);
+node_t *NewNodeVarInit (calculation_tree *calculation_tree_differential_, var_t variable, node_t *node_left, node_t *node_right);
+node_t *NewNodeOpInit  (calculation_tree *calculation_tree_differential_, operation_t operation, node_t *node_left, node_t *node_right);
+node_t *InitNewNode    (calculation_tree *calculation_tree_differential_, node_t *node_left, node_t *node_right);
+node_t *SubtreeInit    (calculation_tree *calculation_tree_differential_, node_t *tree_node);
 
 bool OpenFileSuccess(FILE *fp, const char * file_name);
 bool CloseFileSuccess(FILE *fp, const char * file_name);

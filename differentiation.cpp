@@ -79,61 +79,62 @@ Calculation_Tree_Errors MakeDifferentiationTree(calculation_tree *calculation_tr
     return err;
 }
 
-node_t *NewNodeNumInit(calculation_tree *calculation_tree_differential_, double number, node_t *diff_node_left, node_t *diff_node_right)
+node_t *NewNodeNumInit(calculation_tree *calculation_tree_differential_, double number, node_t *node_left, node_t *node_right)
 {
-    node_t *diff_node = InitNewNode(calculation_tree_differential_, diff_node_left, diff_node_right);
+    node_t *node = InitNewNode(calculation_tree_differential_, node_left, node_right);
 
-    diff_node->type = NUM_TYPE;
-    diff_node->value.number = number;
+    node->type = NUM_TYPE;
+    node->value.number = number;
 
-    return diff_node;
+    return node;
 }
 
-node_t *NewNodeVarInit(calculation_tree *calculation_tree_differential_, var_t variable, node_t *diff_node_left, node_t *diff_node_right)
+node_t *NewNodeVarInit(calculation_tree *calculation_tree_differential_, var_t variable, node_t *node_left, node_t *node_right)
 {
-    node_t *diff_node = InitNewNode(calculation_tree_differential_, diff_node_left, diff_node_right);
+    node_t *node = InitNewNode(calculation_tree_differential_, node_left, node_right);
 
-    diff_node->type = VAR_TYPE;
-    diff_node->value.variable = variable;
+    node->type = VAR_TYPE;
+    node->value.variable = variable;
 
-    return diff_node;
+    return node;
 }
 
-node_t *NewNodeOpInit(calculation_tree *calculation_tree_differential_, operation_t operation, node_t *diff_node_left, node_t *diff_node_right)
+node_t *NewNodeOpInit(calculation_tree *calculation_tree_differential_, operation_t operation, node_t *node_left, node_t *node_right)
 {
-    node_t *diff_node = InitNewNode(calculation_tree_differential_, diff_node_left, diff_node_right);
+    node_t *node = InitNewNode(calculation_tree_differential_, node_left, node_right);
 
-    diff_node->type = OP_TYPE;
-    diff_node->value.operation = operation;
+    node->type = OP_TYPE;
+    node->value.operation = operation;
 
-    return diff_node;
+    return node;
 }
 
-node_t *InitNewNode(calculation_tree *calculation_tree_differential_, node_t *diff_node_left, node_t *diff_node_right)
+node_t *InitNewNode(calculation_tree *calculation_tree_differential_, node_t *node_left, node_t *node_right)
 {
-    node_t *diff_node = (node_t *)calloc(1, sizeof(node_t));
+    node_t *node = (node_t *)calloc(1, sizeof(node_t));
 
-    if (diff_node == NULL)
+    if (node == NULL)
     {
         return NULL;
     }
 
     calculation_tree_differential_->num_of_el++;
+    printf("sfw\n");
 
-    diff_node->left = diff_node_left;
-    diff_node->right = diff_node_right;
+    node->left = node_left;
+    node->right = node_right;
 
-    if (diff_node_left != NULL)
+    if (node_left != NULL)
     {
-        diff_node->left->parent = diff_node;
+        node->left->parent = node;
     }
 
-    if (diff_node_right != NULL)
+    if (node_right != NULL)
     {
-        diff_node->right->parent = diff_node;
+        node->right->parent = node;
     }
 
-    return diff_node;
+    return node;
 }
 
 node_t *SubtreeInit(calculation_tree *calculation_tree_differential_, node_t *tree_node)
@@ -141,37 +142,37 @@ node_t *SubtreeInit(calculation_tree *calculation_tree_differential_, node_t *tr
     if (tree_node == NULL)
         return NULL;
 
-    node_t *diff_node = (node_t *)calloc(1, sizeof(node_t));
+    node_t *node = (node_t *)calloc(1, sizeof(node_t));
 
-    if (diff_node == NULL)
+    if (node == NULL)
     {
         return NULL;
     }
 
     calculation_tree_differential_->num_of_el++;
 
-    diff_node->type = tree_node->type;
-    diff_node->value = tree_node->value;
+    node->type = tree_node->type;
+    node->value = tree_node->value;
 
     if (tree_node->left != NULL)
     {
-        diff_node->left = SubtreeInit(calculation_tree_differential_, tree_node->left);
-        diff_node->left->parent = diff_node;
+        node->left = SubtreeInit(calculation_tree_differential_, tree_node->left);
+        node->left->parent = node;
     }
     else 
     {
-        diff_node->left = NULL;
+        node->left = NULL;
     }
 
     if (tree_node->right != NULL)
     {
-        diff_node->right = SubtreeInit(calculation_tree_differential_, tree_node->right);
-        diff_node->right->parent = diff_node;
+        node->right = SubtreeInit(calculation_tree_differential_, tree_node->right);
+        node->right->parent = node;
     }
     else
     {
-        diff_node->right = NULL;
+        node->right = NULL;
     }
 
-    return diff_node;
+    return node;
 }
