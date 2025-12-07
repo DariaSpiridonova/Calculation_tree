@@ -1,11 +1,11 @@
 #include "calculation_tree.h"
 #include "differentiation.h"
 
-static node_t *GetG(calculation_tree *calculation_tree, char **expression, Calculation_Tree_Errors *err);
-static node_t *GetE(calculation_tree *calculation_tree, char **expression, Calculation_Tree_Errors *err);
-static node_t *GetT(calculation_tree *calculation_tree, char **expression, Calculation_Tree_Errors *err);
-static node_t *GetP(calculation_tree *calculation_tree, char **expression, Calculation_Tree_Errors *err);
-static node_t *GetN(calculation_tree *calculation_tree, char **expression, Calculation_Tree_Errors *err);
+// static node_t *GetG(calculation_tree *calculation_tree, char **expression, Calculation_Tree_Errors *err);
+// static node_t *GetE(calculation_tree *calculation_tree, char **expression, Calculation_Tree_Errors *err);
+// static node_t *GetT(calculation_tree *calculation_tree, char **expression, Calculation_Tree_Errors *err);
+// static node_t *GetP(calculation_tree *calculation_tree, char **expression, Calculation_Tree_Errors *err);
+// static node_t *GetN(calculation_tree *calculation_tree, char **expression, Calculation_Tree_Errors *err);
 
 static bool RecognizingStartPosition(calculation_tree *tree, char **position, node_t **node, node_t *parent);
 static bool RecognizingEndPosition(char **position);
@@ -32,8 +32,8 @@ Calculation_Tree_Errors CalculationTreeInit(calculation_tree *tree, const char *
         return ERROR_DURING_THE_CREATION_OF_THE_TREE;
     }
 
-    tree->buffer_with_variables = (var_t *)calloc(NUM_OF_VARIABLES, sizeof(var_t));
-    tree->buffer_with_variables[0] = nothing;
+    //tree->buffer_with_variables = (var_t *)calloc(NUM_OF_VARIABLES, sizeof(var_t));
+    //tree->buffer_with_variables[0] = nothing;
     tree->root->left = NULL;
     tree->root->right = NULL;
     tree->root->parent = NULL;
@@ -112,7 +112,7 @@ Calculation_Tree_Errors CalculationTreeDestroy(calculation_tree *tree)
     Calculation_Tree_Errors err = NO_ERROR;
     err = CalculationTreeDestroyRecursive(tree, &(tree->root));
 
-    free(tree->buffer_with_variables);
+    //free(tree->buffer_with_variables);
     return err;
 }
 
@@ -346,10 +346,10 @@ void Dump(FILE *fp, const calculation_tree *tree, ssize_t *rank)
     fprintf(fp, "{\n");
     fprintf(fp, "    num_of_el = %zd\n", tree->num_of_el);
     fprintf(fp, "    Buffer with variables content:\n");
-    for (size_t i = 0; tree->buffer_with_variables[i] != nothing; i++)
-    {
-        printf("        [%zu]  %s\n", i, variables_buffer[tree->buffer_with_variables[i]]);
-    }
+    // for (size_t i = 0; tree->buffer_with_variables[i] != nothing; i++)
+    // {
+    //     printf("        [%zu]  %s\n", i, variables_buffer[tree->buffer_with_variables[i]]);
+    // }
     fprintf(fp, "    Tree content:\n");
 
     ssize_t cur_rank = 0;
@@ -594,177 +594,6 @@ Calculation_Tree_Errors ReadTreeFromFile(calculation_tree *tree, const char *nam
     free(tree_buffer);
 
     return err;
-}
-
-node_t *GetG(calculation_tree *tree, char **expression, Calculation_Tree_Errors *err)
-{
-    printf("case G\n");
-    node_t *val = GetE(tree, expression, err);
-    if (**expression != '$') 
-        *err = ERROR_DURING_READ_FILE;
-    printf("G\n");
-    (*expression)++;
-    return val;
-}
-
-node_t *GetE(calculation_tree *tree, char **expression, Calculation_Tree_Errors *err)
-{
-    node_t *val = GetT(tree, expression, err);
-    while (**expression == '+' || **expression == '-')
-    {
-        int op = **expression;
-        (*expression)++;
-        node_t *val2 = GetT(tree, expression, err);
-        if (op == '+')
-            val = NewNodeOpInit(tree, ADD, val, val2);
-        else    
-            val = NewNodeOpInit(tree, SUB, val, val2);
-    }
-
-    return val;
-}
-
-node_t *GetT(calculation_tree *tree, char **expression, Calculation_Tree_Errors *err)
-{
-    node_t *val = GetP(tree, expression, err);
-
-    printf("*expression_in_T = %c\n", **expression);
-    while (**expression == '*' || **expression == '/')
-    {
-        char op = **expression;
-        (*expression)++;
-        node_t *val2 = GetP(tree, expression, err);
-        if (op == '*')
-            val = NewNodeOpInit(tree, MUL, val, val2);
-        else    
-            val = NewNodeOpInit(tree, DIV, val, val2);
-    }
-
-    return val;
-}
-
-node_t *GetP(calculation_tree *tree, char **expression, Calculation_Tree_Errors *err)
-{
-    if (**expression == '(')
-    {
-        (*expression)++;
-        node_t *val = GetE(tree, expression, err);
-        if (**expression != ')') 
-            *err = ERROR_DURING_READ_FILE;
-        else (*expression)++;
-        return val;
-    }
-
-    else 
-        return GetN(tree, expression, err);
-}
-
-node_t *GetN(calculation_tree *tree, char **expression, Calculation_Tree_Errors *err)
-{
-    double val = 0;
-    bool was_shift = false;
-    while ('0' <= **expression && **expression <= '9')
-    {
-        val = val * 10 + (double)(**expression - '0');
-        printf("val_intermediate = %lf\n", val);
-        (*expression)++;
-        was_shift = true;
-    }
-
-    printf("val = %lf\n", val);
-    printf("*expression = %c\n", **expression);
-
-    if (!was_shift) *err = ERROR_DURING_READ_FILE;
-
-    return NewNodeNumInit(tree, val, NULL, NULL);
-}
-
-Calculation_Tree_Errors MakeTreeFromExpression(calculation_tree *tree, const char *logfile_name, const char *name_of_file_with_expression)
-{
-    Calculation_Tree_Errors err = NO_ERROR;
-    
-    tree->num_of_el = 0;
-    tree->file_name = logfile_name;
-
-    char *expression = ReadExpressionFromFile(name_of_file_with_expression, &err);
-    char *expression_beginning = expression;
-
-    printf("expression = %s\n", expression);
-
-    if (err)
-    {
-        free(expression);
-        return err;
-    }
-
-    tree->root = BuildingATree(tree, &expression, &err);
-
-    free(expression_beginning);
-    printf("qwerty\n");
-    
-    if (err)
-    {
-        return err;
-    }
-
-    if (tree->root != NULL)
-        tree->root->parent = NULL;
-
-    tree->buffer_with_variables = (var_t *)calloc(NUM_OF_VARIABLES, sizeof(var_t));
-    tree->buffer_with_variables[0] = nothing;
-
-    if ((err = CalculationTreeVerify(tree)))
-    {
-        return err;
-    }
-
-    return err;
-}
-
-node_t *BuildingATree(calculation_tree *tree, char **expression, Calculation_Tree_Errors *err)
-{
-    return GetG(tree, expression, err);
-}
-
-char *ReadExpressionFromFile(const char *name_of_file, Calculation_Tree_Errors *err)
-{
-    FILE *file_to_read = fopen(name_of_file, "r");
-    if (!OpenFileSuccess(file_to_read, name_of_file))
-    {
-        *err = ERROR_DURING_OPENING_FILE;
-        return NULL;
-    }
-
-    fseek(file_to_read, SEEK_SET, 0);
-    size_t num_of_bytes_in_file = return_num_of_bytes_in_file(fileno(file_to_read));
-
-    char *expression = (char *)calloc(num_of_bytes_in_file + 2, sizeof(char));
-    if (expression == NULL)
-    {
-        *err = ERROR_DURING_MEMORY_ALLOCATION;
-        return NULL;
-    }
-
-    size_t num_success_read_symbols = fread(expression, sizeof(char), num_of_bytes_in_file, file_to_read);
-    if (num_success_read_symbols < num_of_bytes_in_file)
-    {
-        free(expression);
-        printf("123\n");
-        *err = ERROR_DURING_READ_FILE;
-        return NULL;
-    }
-
-    expression[num_success_read_symbols] = '$';
-    expression[num_success_read_symbols + 1] = '\0';
-   
-    if (!CloseFileSuccess(file_to_read, name_of_file))
-    {
-        free(expression);
-        *err = ERROR_DURING_CLOSING_FILE;
-        return NULL;
-    }
-
-    return expression;
 }
 
 void SplitIntoParts(char *tree_buffer)

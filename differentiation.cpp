@@ -66,8 +66,8 @@ Calculation_Tree_Errors MakeDifferentiationTree(calculation_tree *calculation_tr
     if (calculation_tree_differential_->root != NULL)
         calculation_tree_differential_->root->parent = NULL;
 
-    calculation_tree_differential_->buffer_with_variables = (var_t *)calloc(NUM_OF_VARIABLES, sizeof(var_t));
-    calculation_tree_differential_->buffer_with_variables[0] = nothing;
+    //calculation_tree_differential_->buffer_with_variables = (var_t *)calloc(NUM_OF_VARIABLES, sizeof(var_t));
+    //calculation_tree_differential_->buffer_with_variables[0] = nothing;
 
     Calculation_Tree_Errors err = NO_ERROR;
 
