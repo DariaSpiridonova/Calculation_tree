@@ -2,19 +2,19 @@ FLAGS = -lncurses -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggre
 
 CXX = g++
 
-SOURCES =  main.cpp calculation_tree_functions.cpp differentiation.cpp
+SOURCES =  recursive_descent_main.cpp recursive_descent.cpp optimization.cpp differentiation.cpp
 OBJECTS = $(patsubst %.cpp, %.o, $(SOURCES))
 
-all: calculation_tree.exe
+all: recursive_descent.exe
 
 %.o: %.cpp
 	@$(CXX) -c $^ -o $@ $(FLAGS)
 
-calculation_tree.exe: $(OBJECTS)
+recursive_descent.exe: $(OBJECTS)
 	@$(CXX) $^ -o $@ $(FLAGS)
 
 .PHONY: clean
 
 clean:
 	rm *.o
-	rm calculation_tree.exe
+	rm recursive_descent.exe

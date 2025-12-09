@@ -1,7 +1,7 @@
 #ifndef DIFFERENTIATION_TREE
 #define DIFFERENTIATION_TREE
 
-#include "calculation_tree.h"
+#include "recursive_descent.h"
 
 #define dL Differentiation(calculation_tree_differential_, tree_node->left, ind_var)
 #define dR Differentiation(calculation_tree_differential_, tree_node->right, ind_var)
@@ -26,8 +26,8 @@
 
 const double e_num = 2.718281;
 
-Calculation_Tree_Errors MakeDifferentiationTree(calculation_tree *calculation_tree_differential_, const char *logfile_name, calculation_tree *tree, var_t ind_var);
+Calculation_Tree_Errors MakeDifferentiationTree(calculation_tree *calculation_tree_differential_, const char *logfile_name, calculation_tree *tree, char *ind_var);
 
-node_t *Differentiation(calculation_tree *calculation_tree_differential_, node_t *tree_node, var_t ind_var);
+node_t *Differentiation(calculation_tree *calculation_tree_differential_, node_t *tree_node, char *ind_var);
 
 #endif
