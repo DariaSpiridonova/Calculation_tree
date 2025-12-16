@@ -361,13 +361,28 @@ node_t *NewNodeVarInit(program_tree *tree, token_t token, node_t *node_left, nod
 {
     node_t *node = InitNewNode(tree, node_left, node_right, err);
 
-    tree->variables_s.variables[tree->variables_s.variables_size] = {NAN, strdup(token.name), false};
+    bool is_var = false;
+    for (ssize_t i = 0; i < tree->variables_s.variables_size; i++)
+    {
+        if (!strcmp(tree->variables_s.variables[i].name, token.name))
+        {
+            node->name = tree->variables_s.variables[i].name;
+            is_var = true;
+            printf("var = %s\n\n\n", tree->variables_s.variables[i].name);
+            break;
+        }
+    }
+
+    if (!is_var)
+    {
+        tree->variables_s.variables[tree->variables_s.variables_size] = {NAN, strdup(token.name), false};
+        node->name = tree->variables_s.variables[tree->variables_s.variables_size].name;
+        printf("var = %s\n\n\n", tree->variables_s.variables[tree->variables_s.variables_size].name);
+        tree->variables_s.variables_size++;
+    }
 
     node->type = token.type;
-    node->name = tree->variables_s.variables[tree->variables_s.variables_size].name;
 
-    printf("var = %s\n\n\n", tree->variables_s.variables[tree->variables_s.variables_size].name);
-    tree->variables_s.variables_size++;
 
     if (tree->variables_s.variables_size >= tree->variables_s.variables_capacity - 1)
     {

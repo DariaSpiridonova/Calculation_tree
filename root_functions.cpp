@@ -66,11 +66,11 @@ Program_Errors  CalculationTreeDestroy(program_tree  *tree)
     Program_Errors  err = NO_ERROR;
     err = CalculationTreeDestroyRecursive(tree, &(tree->root));
 
-    // for (ssize_t i = 0; i < tree->variables_s.variables_size; i++)
-    // {
-    //     printf("%zd: %s\n", i, tree->variables_s.variables[i].name);
-    //     free(tree->variables_s.variables[i].name);
-    // }
+    for (ssize_t i = 0; i < tree->variables_s.variables_size; i++)
+    {
+        printf("%zd: %s\n", i, tree->variables_s.variables[i].name);
+        free(tree->variables_s.variables[i].name);
+    }
     free(tree->variables_s.variables);
 
     return err;
@@ -101,7 +101,8 @@ Program_Errors  CalculationTreeDestroyRecursive(program_tree  *tree, node_t  **n
     //     free((*node)->value.var.name);
     // }
 
-    free((*node)->name);
+    if ((*node)->type != VAR_TYPE)
+        free((*node)->name);
     free(*node);
     tree->num_of_el--;
     *node = NULL;
