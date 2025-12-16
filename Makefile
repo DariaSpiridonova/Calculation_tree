@@ -2,7 +2,7 @@ FLAGS = -lncurses -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggre
 
 CXX = g++
 
-SOURCES =  recursive_descent_main.cpp recursive_descent.cpp optimization.cpp differentiation.cpp
+SOURCES =  recursive_descent_for_tokens.cpp tokens.cpp root_functions.cpp tokens_main.cpp
 OBJECTS = $(patsubst %.cpp, %.o, $(SOURCES))
 
 all: recursive_descent.exe
