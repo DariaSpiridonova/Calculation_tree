@@ -77,7 +77,7 @@ Program_Errors MakeTokensBuffer(tokens_t *tokens, char **expression)
     tokens->tokens_capacity = NUM_OF_TOKENS;
     tokens->tokens_size = 0;
 
-    while (**expression != '$')
+    while (**expression != '\0')
     {
         NeccesaryExpansion(tokens);
 
@@ -120,6 +120,31 @@ Program_Errors MakeTokensBuffer(tokens_t *tokens, char **expression)
             continue;
         }
 
+        if (!strncmp(*expression, "print", strlen("print")))
+        {
+            MakeCommandToken(tokens, expression, "print");
+            continue;
+        }
+
+        if (!strncmp(*expression, "getnum", strlen("getnum")))
+        {
+            MakeCommandToken(tokens, expression, "getnum");
+            continue;
+        }
+
+        if (!strncmp(*expression, "getstr", strlen("getstr")))
+        {
+            MakeCommandToken(tokens, expression, "getstr");
+            continue;
+        }
+
+        if (!strncmp(*expression, "func", strlen("func")))
+        {
+            printf("hgfvr4eyfvdygver\n");
+            MakeFunctionToken(tokens, expression);
+            continue;
+        }
+
         if (strlen(*expression) >= strlen("while"))
         {
             if (!strncmp(*expression, "while", strlen("while")))
@@ -152,6 +177,14 @@ Program_Errors MakeTokensBuffer(tokens_t *tokens, char **expression)
             MakeSemToken(tokens, expression);
             SkipSpaces(expression);
             
+            continue;
+        }
+
+        if (IsChrInside(expression, ","))
+        {
+            MakeCommaToken(tokens, expression);
+            SkipSpaces(expression);
+
             continue;
         }
 
@@ -204,6 +237,34 @@ void MakeParToken(tokens_t *tokens, char **expression)
     (*expression)++;
 }
 
+void MakeFunctionToken(tokens_t *tokens, char **expression)
+{
+    (*expression) += strlen("func");
+    SkipSpaces(expression);
+
+    if (isalnum(**expression))
+    {
+        MakeFuncToken(tokens, expression);
+        SkipSpaces(expression);
+    }
+}
+
+void MakeFuncToken(tokens_t *tokens, char **expression)
+{
+    char *func = *expression;
+    size_t len = 0;
+    while (isalnum(**expression))
+    {
+        (*expression)++;
+        len++;
+    }
+
+    tokens->tokens_buffer[tokens->tokens_size].type = FUNCTION_TYPE;
+    tokens->tokens_buffer[tokens->tokens_size].name = strndup(func, len);
+
+    tokens->tokens_size++;
+}
+
 void MakeCompToken(tokens_t *tokens, char **expression)
 {
     size_t n = 1;
@@ -245,8 +306,17 @@ void MakeCondToken(tokens_t *tokens, char **expression, const char *condition)
     *expression += strlen(condition);
 
     tokens->tokens_size++;
-    while (isspace(**expression)) 
-        (*expression)++;
+    SkipSpaces(expression);
+}
+
+void MakeCommandToken(tokens_t *tokens, char **expression, const char *condition)
+{
+    tokens->tokens_buffer[tokens->tokens_size].type = COMM_TYPE;
+    tokens->tokens_buffer[tokens->tokens_size].name = strndup(*expression, strlen(condition));
+    *expression += strlen(condition);
+
+    tokens->tokens_size++;
+    SkipSpaces(expression);
 }
 
 void MakeOpToken(tokens_t *tokens, char **expression, const char *function)
@@ -256,8 +326,7 @@ void MakeOpToken(tokens_t *tokens, char **expression, const char *function)
     *expression += strlen(function);
 
     tokens->tokens_size++;
-    while (isspace(**expression)) 
-        (*expression)++;
+    SkipSpaces(expression);
 }
 
 void MakeNumToken(tokens_t *tokens, char **expression)
@@ -284,8 +353,17 @@ void MakeSemToken(tokens_t *tokens, char **expression)
     (*expression)++;
 
     tokens->tokens_size++;
-    while (isspace(**expression)) 
-        (*expression)++;
+    SkipSpaces(expression);
+}
+
+void MakeCommaToken(tokens_t *tokens, char **expression)
+{
+    tokens->tokens_buffer[tokens->tokens_size].type = COMMA_TYPE;
+    tokens->tokens_buffer[tokens->tokens_size].name = strndup(*expression, 1);
+    (*expression)++;
+
+    tokens->tokens_size++;
+    SkipSpaces(expression);
 }
 
 void MakeSignToken(tokens_t *tokens, char **expression)
@@ -295,8 +373,7 @@ void MakeSignToken(tokens_t *tokens, char **expression)
     (*expression)++;
 
     tokens->tokens_size++;
-    while (isspace(**expression)) 
-        (*expression)++;
+    SkipSpaces(expression);
 }
 
 void MakeVarToken(tokens_t *tokens, char **expression)
@@ -343,9 +420,8 @@ char *ReadExpressionFromFile(const char *name_of_file, Program_Errors *err)
         return NULL;
     }
 
-    expression[num_success_read_symbols] = '$';
-    expression[num_success_read_symbols + 1] = '\0';
-   
+    expression[num_success_read_symbols] = '\0';
+    
     if (!CloseFileSuccess(file_to_read, name_of_file))
     {
         free(expression);

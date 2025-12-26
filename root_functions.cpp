@@ -361,7 +361,7 @@ void CreateGraph(const program_tree  *tree, const char *gvfile_name)
     fprintf(fp, "digraph CalculationTree_game {\n");
     fprintf(fp, "   rankdir=TB;\n");
     fprintf(fp, "   node[shape=\"record\", style=\"filled\", fillcolor=\"Pink\", fontsize=20, pin = true];\n");
-    fprintf(fp, "   splines = ortho;\n");
+    //fprintf(fp, "   splines = ortho;\n");
     fprintf(fp, "   rank = same;\n");
     fprintf(fp, "   nodesep = 0.5;\n");
     fprintf(fp, "   edge[arrowsize = 0.5];\n");
@@ -393,7 +393,20 @@ void PrintEdges(FILE *fp, node_t  *node)
 
     PrintEdges(fp, node->left);
 
-    fprintf(fp, "\"node_%p\" [fillcolor = \"Pink\", label = \"{<parent> %p | <type> %s | <data> %s | {<left_operand> %p |<right_operand> %p}}\"];\n", node, node->parent, type_buffer[(int)node->type], node->name, node->left, node->right);
+    if (node->type == COMPARE_TYPE)
+    {
+        for (ssize_t i = 0; i < NUM_OF_SYMBOLS; i++)
+        {
+            if (!strcmp(compare_symbols[i], node->name))
+            {
+                fprintf(fp, "\"node_%p\" [fillcolor = \"Pink\", label = \"{<parent> %p | <type> %s | <data> %s | {<left_operand> %p |<right_operand> %p}}\"];\n", node, node->parent, type_buffer[(int)node->type], symbols_in_words[i], node->left, node->right);
+                break;
+            }
+        }
+    }
+
+    else
+        fprintf(fp, "\"node_%p\" [fillcolor = \"Pink\", label = \"{<parent> %p | <type> %s | <data> %s | {<left_operand> %p |<right_operand> %p}}\"];\n", node, node->parent, type_buffer[(int)node->type], node->name, node->left, node->right);
 
     PrintEdges(fp, node->right);
 

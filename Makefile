@@ -2,7 +2,7 @@ FLAGS = -lncurses -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggre
 
 CXX = g++
 
-SOURCES =  recursive_descent_for_tokens.cpp tokens.cpp root_functions.cpp tokens_main.cpp
+SOURCES =  recursive_descent_for_tokens.cpp tokens.cpp root_functions.cpp tokens_main.cpp saving_and_reading.cpp
 OBJECTS = $(patsubst %.cpp, %.o, $(SOURCES))
 
 all: recursive_descent.exe
@@ -12,7 +12,7 @@ all: recursive_descent.exe
 
 recursive_descent.exe: $(OBJECTS)
 	@$(CXX) $^ -o $@ $(FLAGS)
-
+ 
 .PHONY: clean
 
 clean:

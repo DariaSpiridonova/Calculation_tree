@@ -21,32 +21,52 @@
 
 const ssize_t SIZE_OF_NAME = 200;
 const ssize_t NUM_OF_VARIABLES = 10;
-const ssize_t NUM_OF_TYPES = 10;
+const ssize_t NUM_OF_TYPES = 12;
 const ssize_t NUM_OF_SIGNES = 10;
 const ssize_t NUM_OF_OPERATIONS = 6;
-const ssize_t NUM_OF_SYMBOLS = 10;
+const ssize_t NUM_OF_SYMBOLS = 6;
 const ssize_t NUM_OF_TOKENS = 30;
 const char link_to_graphviz_file[] = "../Graphviz/program_tree_";
 
-const char * const type_buffer[NUM_OF_TYPES] = {"OP_TYPE", "VAR_TYPE", "NUM_TYPE", "PAR_TYPE", "COND_TYPE", "FUNC_TYPE", "SEM_POINT_TYPE", "ASSIGN_TYPE", "COMPARE_TYPE", "SIGN_TYPE"};
+const char * const type_buffer[NUM_OF_TYPES] = {"VAR_TYPE", "NUM_TYPE", "PAR_TYPE", "COND_TYPE", "FUNC_TYPE", "FUNCTION_TYPE", "COMMA_TYPE", "SEM_POINT_TYPE", "ASSIGN_TYPE", "COMPARE_TYPE", "SIGN_TYPE", "COMM_TYPE"};
+const char type_alphas__buffer[NUM_OF_TYPES] = {'V', 'N', 'P', 'C', 'F', 'U', 'J', 'E', 'A', 'M', 'I', 'O'};
 
 enum type_t 
 {
-    OP_TYPE,
     VAR_TYPE,
     NUM_TYPE,
     PAR_TYPE,
     COND_TYPE,
     FUNC_TYPE,
+    FUNCTION_TYPE,
+    COMMA_TYPE,
     SEM_POINT_TYPE,
     ASSIGN_TYPE,
     COMPARE_TYPE,
-    SIGN_TYPE
+    SIGN_TYPE,
+    COMM_TYPE
 };
 
 const char * const signes_buffer[NUM_OF_SIGNES] = {"\0", "+", "-", "*", "/", "^"};
 const char * const operations_buffer[NUM_OF_OPERATIONS] = {"\0", "log", "sin", "cos", "tg", "ctg"};
 const char * const compare_symbols[NUM_OF_SYMBOLS] = {"\0", "==", ">", "<", ">=", "<="};
+const char * const symbols_in_words[NUM_OF_SYMBOLS] = {"\0", "==", "&jt;", "&lt;", "&ge;", "&le;"};
+const char * const io_buffer[NUM_OF_SYMBOLS] = {"\0", "getnum", "getstr", "print"};
+const char * const conditions_buffer[NUM_OF_SYMBOLS] = {"\0", "if", "while"};
+
+enum input_output_t 
+{
+    NO_COM,
+    GET,
+    RETURN
+};
+
+enum condition_t
+{
+    NO_COND,
+    IF,
+    WHILE
+};
 
 enum sign_t 
 {
@@ -155,7 +175,8 @@ enum Program_Errors
     ABSENCE_PAR_OPEN,
     ABSENCE_PAR_CLOSE,
     EMPTY_FUNC_ARG,
-    ABSENCE_ASSIGN
+    ABSENCE_ASSIGN,
+    ABSENCE_PARAMS
 };
 
 Program_Errors MakeTreeFromProgram(program_tree *tree, const char *logfile_name, const char *name_of_file_with_tokens);
@@ -164,14 +185,30 @@ void DestroyTokensBuffer(tokens_t *tokens);
 void NeccesaryExpansion(tokens_t *tokens);
 bool IsChrInside(char **expression, const char *string);
 void MakeParToken(tokens_t *tokens, char **expression);
+void MakeFunctionToken(tokens_t *tokens, char **expression);
+void MakeFuncToken(tokens_t *tokens, char **expression);
 void MakeCompToken(tokens_t *tokens, char **expression);
 void MakeCompOrAssignToken(tokens_t *tokens, char **expression);
 void MakeOpToken(tokens_t *tokens, char **expression, const char *function);
 void MakeCondToken(tokens_t *tokens, char **expression, const char *condition);
+void MakeCommandToken(tokens_t *tokens, char **expression, const char *condition);
 void MakeSignToken(tokens_t *tokens, char **expression);
 void MakeNumToken(tokens_t *tokens, char **expression);
 void MakeSemToken(tokens_t *tokens, char **expression);
+void MakeCommaToken(tokens_t *tokens, char **expression);
 void MakeVarToken(tokens_t *tokens, char **expression);
+
+Program_Errors SaveTreeToFile(program_tree *tree, const char *name_of_file);
+void SaveTreeToFileRecursive(FILE *fp, node_t *node);
+
+Program_Errors MakeTreeFromFile(program_tree *tree, const char *logfile_name, const char *name_of_file);
+void SplitIntoParts(char *tree_buffer);
+
+char *ReadNodeFromBuffer(program_tree *tree, char **position, node_t **node, node_t *parent);
+Program_Errors NodeFromFileInit(program_tree *tree, char **position, node_t **node, node_t *parent);
+node_t *NewNodeStringInitByPos(node_t **node, int type);
+node_t *NewNodeNumInitByPos(node_t **node);
+node_t *NewNodeVarInitByPos(program_tree *tree, node_t **node, Program_Errors *err);
 
 node_t *GetG(program_tree *tree, tokens_t tokens, Program_Errors *err);
 
