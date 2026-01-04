@@ -176,7 +176,8 @@ enum Program_Errors
     ABSENCE_PAR_CLOSE,
     EMPTY_FUNC_ARG,
     ABSENCE_ASSIGN,
-    ABSENCE_PARAMS
+    ABSENCE_PARAMS,
+    ABSENCE_RIGHT_PARAM
 };
 
 Program_Errors MakeTreeFromProgram(program_tree *tree, const char *logfile_name, const char *name_of_file_with_tokens);

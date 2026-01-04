@@ -22,8 +22,9 @@ node_t *GetG(program_tree *tree, tokens_t tokens, Program_Errors *err)
     node_t *val = GetOp(tree, tokens, err, &token_num);
     if (strcmp(tokens.tokens_buffer[token_num].name, ";"))
     {
-        printf("ABSENCE_SEMICOLON\n");
+        printf("ABSENCE_SEMICOLON_0\n");
         *err = ABSENCE_SEMICOLON;
+        exit(__LINE__);
     }
     printf("G\n");
 
@@ -95,7 +96,10 @@ static node_t *GetCommand(program_tree *tree, tokens_t tokens, Program_Errors *e
     token_t command = tokens.tokens_buffer[*token_num];
     (*token_num)++;
 
-    val = GetD(tree, tokens, err, token_num);
+    if (!strcmp(command.name, "print"))
+        val = GetD(tree, tokens, err, token_num);
+    else    
+        val = GetV(tree, tokens, err, token_num);
     printf("*token_num87 = %zd\n", *token_num);
     val = NewNodeStringInit(tree, command, NULL, val, err);
 
@@ -179,6 +183,7 @@ static node_t *GetFunc(program_tree *tree, tokens_t tokens, Program_Errors *err,
     if (tokens.tokens_buffer[*token_num].type == PAR_TYPE && !strcmp(tokens.tokens_buffer[*token_num].name, "("))
     {
         (*token_num)++;
+        printf("SFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\n");
         val1 = GetParams(tree, tokens, err, token_num);
         if (tokens.tokens_buffer[*token_num].type == PAR_TYPE && !strcmp(tokens.tokens_buffer[*token_num].name, ")"))
         {
@@ -264,12 +269,35 @@ static node_t *GetA(program_tree *tree, tokens_t tokens, Program_Errors *err, ss
 
 static node_t *GetParams(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num)
 {
+    node_t * val = NULL;
+    node_t * val2 = NULL;
+
+    token_t comma;
+
     if (tokens.tokens_buffer[*token_num].type == PAR_TYPE)
+    {
+        printf("NULL from GetParams\n");
         return NULL;
+    }
 
     if (tokens.tokens_buffer[*token_num].type == VAR_TYPE)
     {
-
+        val = GetV(tree, tokens, err, token_num);
+        while (tokens.tokens_buffer[*token_num].type == COMMA_TYPE)
+        {
+            comma = tokens.tokens_buffer[*token_num];
+            (*token_num)++;
+            if (tokens.tokens_buffer[*token_num].type == VAR_TYPE)
+            {
+                val2 = GetV(tree, tokens, err, token_num);
+            }
+            else 
+            {
+                printf("ABSENCE_RIGHT_PARAM");
+                *err = ABSENCE_RIGHT_PARAM;
+            }
+            val = NewNodeStringInit(tree, comma, val, val2, err);
+        }
     }
 
     else 
@@ -277,6 +305,8 @@ static node_t *GetParams(program_tree *tree, tokens_t tokens, Program_Errors *er
         printf("ABSENCE_PARAMS");
         *err = ABSENCE_PARAMS;
     }
+
+    return val;
 }
 
 static node_t *GetD(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num)
