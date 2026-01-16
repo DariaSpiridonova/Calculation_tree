@@ -8,6 +8,8 @@ static node_t *GetF(program_tree *tree, tokens_t tokens, Program_Errors *err, ss
 static node_t *GetV(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num);
 static node_t *GetOp(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num);
 static node_t *GetCond(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num);
+static node_t *GetFuncDef(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num);
+static node_t *PerfomFunc(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num);
 static node_t *GetFunc(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num);
 static node_t *GetParams(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num);
 static node_t *GetCommand(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num);
@@ -24,7 +26,7 @@ node_t *GetG(program_tree *tree, tokens_t tokens, Program_Errors *err)
     {
         printf("ABSENCE_SEMICOLON_0\n");
         *err = ABSENCE_SEMICOLON;
-        exit(__LINE__);
+        //exit(__LINE__);
     }
     printf("G\n");
 
@@ -42,9 +44,14 @@ static node_t *GetOp(program_tree *tree, tokens_t tokens, Program_Errors *err, s
         val = GetCond(tree, tokens, err, token_num);
     }
 
-    if (tokens.tokens_buffer[*token_num].type == FUNCTION_TYPE)
+    else if (tokens.tokens_buffer[*token_num].type == FUNC_DEF_TYPE)
     {
-        val = GetFunc(tree, tokens, err, token_num);
+        val = GetFuncDef(tree, tokens, err, token_num);
+    }
+
+    else if (tokens.tokens_buffer[*token_num].type == FUNC_CALL_TYPE)
+    {
+        val = PerfomFunc(tree, tokens, err, token_num);
     }
 
     else if (tokens.tokens_buffer[*token_num].type == COMM_TYPE)
@@ -73,6 +80,16 @@ static node_t *GetOp(program_tree *tree, tokens_t tokens, Program_Errors *err, s
             val2 = GetCond(tree, tokens, err, token_num);
         }
 
+        else if (tokens.tokens_buffer[*token_num].type == FUNC_DEF_TYPE)
+        {
+            val2 = GetFuncDef(tree, tokens, err, token_num);
+        }
+
+        else if (tokens.tokens_buffer[*token_num].type == FUNC_CALL_TYPE)
+        {
+            val2 = PerfomFunc(tree, tokens, err, token_num);
+        }
+
         else if (tokens.tokens_buffer[*token_num].type == COMM_TYPE)
         {
             val2 = GetCommand(tree, tokens, err, token_num);
@@ -89,9 +106,133 @@ static node_t *GetOp(program_tree *tree, tokens_t tokens, Program_Errors *err, s
     return val;
 }
 
+static node_t *PerfomFunc(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num)
+{
+    printf("PerfomFunc\n\n\n");
+    node_t *var = NULL;
+    node_t *var1 = NULL;
+    ssize_t num_of_vars = 0;
+    token_t comma;
+
+    token_t func = tokens.tokens_buffer[*token_num];
+    (*token_num)++;
+    if (tokens.tokens_buffer[*token_num].type == PAR_TYPE && !strcmp(tokens.tokens_buffer[*token_num].name, "("))
+    {
+        (*token_num)++;
+        if (tokens.tokens_buffer[*token_num].type != PAR_TYPE)
+        {
+            var = GetV(tree, tokens, err, token_num);
+            num_of_vars++;
+            while (tokens.tokens_buffer[*token_num].type == COMMA_TYPE)
+            {
+                comma = tokens.tokens_buffer[*token_num];
+                (*token_num)++;
+                var1 = GetV(tree, tokens, err, token_num);
+                num_of_vars++;
+                var = NewNodeStringInit(tree, comma, var1, var, err);
+            }
+        }
+        if (tokens.tokens_buffer[*token_num].type == PAR_TYPE && !strcmp(tokens.tokens_buffer[*token_num].name, ")"))
+        {
+            (*token_num)++;
+            var = NewNodeFuncCallInit(tree, func, NULL, var, err);
+        }
+        else 
+        {
+            printf("ABSENCE_PAR_CLOSE\n");
+            *err = ABSENCE_PAR_CLOSE;
+        }
+    }
+    else 
+    {
+        printf("ABSENCE_PAR_OPEN\n");
+        *err = ABSENCE_PAR_OPEN;
+    }
+
+    return var;
+}
+
+static node_t *GetFuncDef(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num)
+{
+    printf("GetFuncDef\n\n\n");
+    node_t *param = NULL;
+    node_t *param1 = NULL;
+    ssize_t num_of_params = 0;
+    token_t comma;
+
+    token_t func = tokens.tokens_buffer[*token_num];
+    (*token_num)++;
+    if (tokens.tokens_buffer[*token_num].type == PAR_TYPE && !strcmp(tokens.tokens_buffer[*token_num].name, "("))
+    {
+        (*token_num)++;
+        if (tokens.tokens_buffer[*token_num].type != PAR_TYPE)
+        {
+            param = GetV(tree, tokens, err, token_num);
+            num_of_params++;
+            while (tokens.tokens_buffer[*token_num].type == COMMA_TYPE)
+            {
+                comma = tokens.tokens_buffer[*token_num];
+                (*token_num)++;
+                param1 = GetV(tree, tokens, err, token_num);
+                num_of_params++;
+                param = NewNodeStringInit(tree, comma, param1, param, err);
+            }
+        }
+        if (tokens.tokens_buffer[*token_num].type == PAR_TYPE && !strcmp(tokens.tokens_buffer[*token_num].name, ")"))
+        {
+            (*token_num)++;
+            if (tokens.tokens_buffer[*token_num].type == PAR_TYPE && !strcmp(tokens.tokens_buffer[*token_num].name, "{"))
+            {
+                (*token_num)++;
+                param1 = GetOp(tree, tokens, err, token_num);
+
+                if (strcmp(tokens.tokens_buffer[*token_num].name, ";"))
+                {
+                    printf("ABSENCE_SEMICOLON\n");
+                    *err = ABSENCE_SEMICOLON;
+                }
+                else 
+                {
+                    (*token_num)++;
+                }
+
+                printf("*token_num138 = %zd\n", *token_num);
+                if (tokens.tokens_buffer[*token_num].type == PAR_TYPE && !strcmp(tokens.tokens_buffer[*token_num].name, "}"))
+                {
+                    (*token_num)++;
+                    param = NewNodeFuncInit(tree, func, param, param1, err, num_of_params);
+                }
+                else
+                {
+                    printf("ABSENCE_PAR_CLOSE 94\n");
+                    *err = ABSENCE_PAR_CLOSE;
+                }
+            }
+            else 
+            {
+                printf("ABSENCE_PAR_OPEN\n");
+                *err = ABSENCE_PAR_OPEN;
+            }
+        }
+        else 
+        {
+            printf("ABSENCE_PAR_CLOSE\n");
+            *err = ABSENCE_PAR_CLOSE;
+        }
+    }
+    else 
+    {
+        printf("ABSENCE_PAR_OPEN\n");
+        *err = ABSENCE_PAR_OPEN;
+    }
+
+    return param;
+}
+
 static node_t *GetCommand(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num)
 {
     node_t *val = NULL;
+    printf("                                  GetCommand     \n");
 
     token_t command = tokens.tokens_buffer[*token_num];
     (*token_num)++;
@@ -108,7 +249,7 @@ static node_t *GetCommand(program_tree *tree, tokens_t tokens, Program_Errors *e
 
 static node_t *GetCond(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num)
 {
-    printf("GetCond\n\n\n");
+    printf("                                        GetCond\n\n\n");
     node_t *val1 = NULL;
     node_t *val2 = NULL;
     node_t *val = NULL;
@@ -149,6 +290,7 @@ static node_t *GetCond(program_tree *tree, tokens_t tokens, Program_Errors *err,
                     printf("ABSENCE_PAR_CLOSE 94\n");
                     *err = ABSENCE_PAR_CLOSE;
                 }
+                printf("    tokens.tokens_buffer[*token_num].name in GetCond = %s\n", tokens.tokens_buffer[*token_num].name);
             }
             else 
             {
@@ -178,7 +320,7 @@ static node_t *GetFunc(program_tree *tree, tokens_t tokens, Program_Errors *err,
     node_t *val2 = NULL;
     node_t *val = NULL;
 
-    token_t function = tokens.tokens_buffer[*token_num];
+    token_t func = tokens.tokens_buffer[*token_num];
     (*token_num)++;
     if (tokens.tokens_buffer[*token_num].type == PAR_TYPE && !strcmp(tokens.tokens_buffer[*token_num].name, "("))
     {
@@ -208,7 +350,7 @@ static node_t *GetFunc(program_tree *tree, tokens_t tokens, Program_Errors *err,
                 if (tokens.tokens_buffer[*token_num].type == PAR_TYPE && !strcmp(tokens.tokens_buffer[*token_num].name, "}"))
                 {
                     (*token_num)++;
-                    val = NewNodeStringInit(tree, function, val1, val2, err);
+                    val = NewNodeStringInit(tree, func, val1, val2, err);
                 }
                 else
                 {
@@ -490,7 +632,7 @@ node_t *InitNewNode(program_tree *tree, node_t *node_left, node_t *node_right, P
     }
 
     tree->num_of_el++;
-    printf("sfw\n");
+    printf("InitNewNode\n");
 
     node->left = node_left;
     node->right = node_right;
@@ -541,6 +683,89 @@ node_t *NewNodeVarInit(program_tree *tree, token_t token, node_t *node_left, nod
         tree->variables_s.variables = (variable *)realloc(tree->variables_s.variables, (size_t)tree->variables_s.variables_capacity*sizeof(variable));
 
         if (tree->variables_s.variables == NULL)
+        {
+            printf("ERROR_DURING_MEMORY_ALLOCATION in NewNodeVarInit\n");
+            *err = ERROR_DURING_MEMORY_ALLOCATION;
+        }
+    }
+
+    return node;
+}
+
+node_t *NewNodeFuncInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err, ssize_t num_of_parameters)
+{
+    node_t *node = InitNewNode(tree, node_left, node_right, err);
+
+    bool is_func = false;
+    for (ssize_t i = 0; i < tree->functions_s.functions_size; i++)
+    {
+        if (!strcmp(tree->functions_s.functions[i].name, token.name))
+        {
+            node->name = tree->functions_s.functions[i].name;
+            tree->functions_s.functions[i].num_of_parameters = num_of_parameters;
+            is_func = true;
+            printf("func = %s\n\n\n", tree->functions_s.functions[i].name);
+            break;
+        }
+    }
+
+    if (!is_func)
+    {
+        tree->functions_s.functions[tree->functions_s.functions_size] = {num_of_parameters, strdup(token.name), false};
+        node->name = tree->functions_s.functions[tree->functions_s.functions_size].name;
+        printf("func = %s\n\n\n", tree->functions_s.functions[tree->functions_s.functions_size].name);
+        tree->functions_s.functions_size++;
+    }
+
+    node->type = token.type;
+
+    if (tree->functions_s.functions_size >= tree->functions_s.functions_capacity - 1)
+    {
+        tree->functions_s.functions_capacity *= 2;
+        tree->functions_s.functions = (function *)realloc(tree->functions_s.functions, (size_t)tree->functions_s.functions_capacity*sizeof(function));
+
+        if (tree->functions_s.functions == NULL)
+        {
+            printf("ERROR_DURING_MEMORY_ALLOCATION in NewNodeVarInit\n");
+            *err = ERROR_DURING_MEMORY_ALLOCATION;
+        }
+    }
+
+    return node;
+}
+
+node_t *NewNodeFuncCallInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err)
+{
+    node_t *node = InitNewNode(tree, node_left, node_right, err);
+
+    bool is_func = false;
+    for (ssize_t i = 0; i < tree->functions_s.functions_size; i++)
+    {
+        if (!strcmp(tree->functions_s.functions[i].name, token.name))
+        {
+            node->name = tree->functions_s.functions[i].name;
+            is_func = true;
+            printf("func = %s\n\n\n", tree->functions_s.functions[i].name);
+            break;
+        }
+    }
+
+    if (!is_func)
+    {
+        tree->functions_s.functions[tree->functions_s.functions_size] = {-1, strdup(token.name), false};
+        node->name = tree->functions_s.functions[tree->functions_s.functions_size].name;
+        printf("func = %s\n\n\n", tree->functions_s.functions[tree->functions_s.functions_size].name);
+        tree->functions_s.functions_size++;
+    }
+
+    node->type = token.type;
+
+    if (tree->functions_s.functions_size >= tree->functions_s.functions_capacity - 1)
+    {
+        tree->functions_s.functions_capacity *= 2;
+        tree->functions_s.functions = (function *)realloc(tree->functions_s.functions, (size_t)tree->functions_s.functions_capacity*sizeof(function));
+
+        if (tree->functions_s.functions == NULL)
         {
             printf("ERROR_DURING_MEMORY_ALLOCATION in NewNodeVarInit\n");
             *err = ERROR_DURING_MEMORY_ALLOCATION;

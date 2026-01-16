@@ -43,6 +43,9 @@ Program_Errors MakeTreeFromProgram(program_tree *tree, const char *logfile_name,
     tree->variables_s.variables = (variable *)calloc((size_t)NUM_OF_VARIABLES, sizeof(variable));
     tree->variables_s.variables_size = 0;
     tree->variables_s.variables_capacity = NUM_OF_VARIABLES;
+    tree->functions_s.functions = (function *)calloc((size_t)NUM_OF_FUNCTIONS, sizeof(function));
+    tree->functions_s.functions_size = 0;
+    tree->functions_s.functions_capacity = NUM_OF_FUNCTIONS;
     tree->file_name = logfile_name;
     
     tree->root = BuildingATree(tree, tokens, &err);
@@ -138,10 +141,17 @@ Program_Errors MakeTokensBuffer(tokens_t *tokens, char **expression)
             continue;
         }
 
-        if (!strncmp(*expression, "func", strlen("func")))
+        if (!strncmp(*expression, "func_def", strlen("func_def")))
         {
-            printf("hgfvr4eyfvdygver\n");
-            MakeFunctionToken(tokens, expression);
+            printf("func_def\n");
+            MakeFunctionToken(tokens, expression, "func_def");
+            continue;
+        }
+
+        if (!strncmp(*expression, "func_call", strlen("func_call")))
+        {
+            printf("func_call\n");
+            MakeFunctionToken(tokens, expression, "func_call");
             continue;
         }
 
@@ -237,19 +247,19 @@ void MakeParToken(tokens_t *tokens, char **expression)
     (*expression)++;
 }
 
-void MakeFunctionToken(tokens_t *tokens, char **expression)
+void MakeFunctionToken(tokens_t *tokens, char **expression, const char *func_act)
 {
-    (*expression) += strlen("func");
+    (*expression) += strlen(func_act);
     SkipSpaces(expression);
 
     if (isalnum(**expression))
     {
-        MakeFuncToken(tokens, expression);
+        MakeFuncToken(tokens, expression, !strcmp(func_act, "func_def") ? 1 : 0);
         SkipSpaces(expression);
     }
 }
 
-void MakeFuncToken(tokens_t *tokens, char **expression)
+void MakeFuncToken(tokens_t *tokens, char **expression, const bool is_func_def)
 {
     char *func = *expression;
     size_t len = 0;
@@ -259,7 +269,11 @@ void MakeFuncToken(tokens_t *tokens, char **expression)
         len++;
     }
 
-    tokens->tokens_buffer[tokens->tokens_size].type = FUNCTION_TYPE;
+    is_func_def ? 
+        tokens->tokens_buffer[tokens->tokens_size].type = FUNC_DEF_TYPE 
+    : 
+        tokens->tokens_buffer[tokens->tokens_size].type = FUNC_CALL_TYPE;
+
     tokens->tokens_buffer[tokens->tokens_size].name = strndup(func, len);
 
     tokens->tokens_size++;
@@ -319,11 +333,11 @@ void MakeCommandToken(tokens_t *tokens, char **expression, const char *condition
     SkipSpaces(expression);
 }
 
-void MakeOpToken(tokens_t *tokens, char **expression, const char *function)
+void MakeOpToken(tokens_t *tokens, char **expression, const char *func)
 {
     tokens->tokens_buffer[tokens->tokens_size].type = FUNC_TYPE;
-    tokens->tokens_buffer[tokens->tokens_size].name = strndup(*expression, strlen(function));
-    *expression += strlen(function);
+    tokens->tokens_buffer[tokens->tokens_size].name = strndup(*expression, strlen(func));
+    *expression += strlen(func);
 
     tokens->tokens_size++;
     SkipSpaces(expression);

@@ -16,27 +16,27 @@ int main()
 
     CALCULATION_TREE_DUMP(&program_tree_);
 
-    if ((err = SaveTreeToFile(&program_tree_, "file_program.txt")))
-    {
-        PrintError(err);
-        return 4;
-    }
+    // if ((err = SaveTreeToFile(&program_tree_, "file_program.txt")))
+    // {
+    //     PrintError(err);
+    //     return 4;
+    // }
     
-    program_tree program_tree_1 = {0};
+    // program_tree program_tree_1 = {0};
     
-    if ((err = MakeTreeFromFile(&program_tree_1, "logfile_for_tree_from_second_file.htm", "file_program.txt")))
-    {
-        PrintError(err);
-        return 4;
-    }
+    // if ((err = MakeTreeFromFile(&program_tree_1, "logfile_for_tree_from_second_file.htm", "file_program.txt")))
+    // {
+    //     PrintError(err);
+    //     return 4;
+    // }
     
-    CALCULATION_TREE_DUMP(&program_tree_1);
+    // CALCULATION_TREE_DUMP(&program_tree_1);
 
-    if ((err = TranscriptionIntoAssembler(&program_tree_1, "program_tree.asm")))
-    {
-        PrintError(err);
-        return 5;
-    }
+    // if ((err = TranscriptionIntoAssembler(&program_tree_1, "program_tree.asm")))
+    // {
+    //     PrintError(err);
+    //     return 5;
+    // }
 
     // if ((err = OptimizationFunction(&program_tree_)))
     // {
@@ -96,11 +96,11 @@ int main()
         return 8;
     }
 
-    if ((err = CalculationTreeDestroy(&program_tree_1)))
-    {
-        PrintError(err);
-        return 9;
-    }
+    // if ((err = CalculationTreeDestroy(&program_tree_1)))
+    // {
+    //     PrintError(err);
+    //     return 9;
+    // }
 
     // if (is_var)
     // {

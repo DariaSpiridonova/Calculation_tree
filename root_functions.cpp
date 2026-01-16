@@ -73,6 +73,13 @@ Program_Errors  CalculationTreeDestroy(program_tree  *tree)
     }
     free(tree->variables_s.variables);
 
+    for (ssize_t i = 0; i < tree->functions_s.functions_size; i++)
+    {
+        printf("%zd: %s\n", i, tree->functions_s.functions[i].name);
+        free(tree->functions_s.functions[i].name);
+    }
+    free(tree->functions_s.functions);
+
     return err;
 }
 
@@ -96,12 +103,7 @@ Program_Errors  CalculationTreeDestroyRecursive(program_tree  *tree, node_t  **n
     CalculationTreeDestroyRecursive(tree, &((*node)->left));
     CalculationTreeDestroyRecursive(tree, &((*node)->right));
 
-    // if ((*node)->type == VAR_TYPE)//тут надо понять встречается ли в дереве эта переменная ещё или нет, если да, то буфер не надо очищать, если нет, то нужно как то указать, что этой переменной в дереве нет 
-    // {
-    //     free((*node)->value.var.name);
-    // }
-
-    if ((*node)->type != VAR_TYPE)
+    if ((*node)->type != VAR_TYPE && (*node)->type != FUNC_CALL_TYPE && (*node)->type != FUNC_DEF_TYPE)
         free((*node)->name);
     free(*node);
     tree->num_of_el--;
@@ -318,6 +320,11 @@ void Dump(FILE *fp, const program_tree  *tree, ssize_t *rank)
     for (ssize_t i = 0; i < tree->variables_s.variables_size; i++)
     {
         printf("        [%zd]  %s\n", i, tree->variables_s.variables[i].name);
+    }
+    fprintf(fp, "    Buffer with functions content:\n");
+    for (ssize_t i = 0; i < tree->functions_s.functions_size; i++)
+    {
+        printf("        [%zd]  %s\n", i, tree->functions_s.functions[i].name);
     }
     fprintf(fp, "    Tree content:\n");
 

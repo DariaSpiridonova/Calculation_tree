@@ -1,6 +1,12 @@
 #include "tokens.h"
 #include "root_functions.h"
 
+/**
+ * @brief
+ * This function saves the tree to a file using prefix traversal 
+ * @param tree a tree whose nodes are syntactic constructions of the language
+ * @param name_of_file file for saving your tree
+ */
 Program_Errors SaveTreeToFile(program_tree *tree, const char *name_of_file)
 {
     ASSERTS(tree);
@@ -60,6 +66,21 @@ void SaveTreeToFileRecursive(FILE *fp, node_t *node)
             fprintf(fp, " \"F\" ");
             break;
 
+        case (int)FUNC_DEF_TYPE:
+            fprintf(fp, " \"%s\" ", node->name);
+            fprintf(fp, " \"U\" ");
+            break;
+
+        case (int)FUNC_CALL_TYPE:
+            fprintf(fp, " \"%s\" ", node->name);
+            fprintf(fp, " \"X\" ");
+            break;
+
+        case (int)COMMA_TYPE:
+            fprintf(fp, " \"%s\" ", node->name);
+            fprintf(fp, " \"J\" ");
+            break;
+
         case (int)SEM_POINT_TYPE:
             fprintf(fp, " \"%s\" ", node->name);
             fprintf(fp, " \"E\" ");
@@ -116,6 +137,9 @@ Program_Errors MakeTreeFromFile(program_tree *tree, const char *logfile_name, co
     tree->variables_s.variables = (variable *)calloc((size_t)NUM_OF_VARIABLES, sizeof(variable));
     tree->variables_s.variables_size = 0;
     tree->variables_s.variables_capacity = NUM_OF_VARIABLES;
+    tree->functions_s.functions = (function *)calloc((size_t)NUM_OF_FUNCTIONS, sizeof(function));
+    tree->functions_s.functions_size = 0;
+    tree->functions_s.functions_capacity = NUM_OF_FUNCTIONS;
     tree->file_name = logfile_name;
     tree->root = NULL;
 

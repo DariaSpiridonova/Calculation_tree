@@ -21,15 +21,16 @@
 
 const ssize_t SIZE_OF_NAME = 200;
 const ssize_t NUM_OF_VARIABLES = 10;
-const ssize_t NUM_OF_TYPES = 12;
+const ssize_t NUM_OF_FUNCTIONS = 10;
+const ssize_t NUM_OF_TYPES = 13;
 const ssize_t NUM_OF_SIGNES = 10;
 const ssize_t NUM_OF_OPERATIONS = 6;
 const ssize_t NUM_OF_SYMBOLS = 6;
 const ssize_t NUM_OF_TOKENS = 30;
 const char link_to_graphviz_file[] = "../Graphviz/program_tree_";
 
-const char * const type_buffer[NUM_OF_TYPES] = {"VAR_TYPE", "NUM_TYPE", "PAR_TYPE", "COND_TYPE", "FUNC_TYPE", "FUNCTION_TYPE", "COMMA_TYPE", "SEM_POINT_TYPE", "ASSIGN_TYPE", "COMPARE_TYPE", "SIGN_TYPE", "COMM_TYPE"};
-const char type_alphas__buffer[NUM_OF_TYPES] = {'V', 'N', 'P', 'C', 'F', 'U', 'J', 'E', 'A', 'M', 'I', 'O'};
+const char * const type_buffer[NUM_OF_TYPES] = {"VAR_TYPE", "NUM_TYPE", "PAR_TYPE", "COND_TYPE", "FUNC_TYPE", "FUNC_DEF_TYPE", "FUNC_CALL_TYPE", "COMMA_TYPE", "SEM_POINT_TYPE", "ASSIGN_TYPE", "COMPARE_TYPE", "SIGN_TYPE", "COMM_TYPE"};
+const char type_alphas__buffer[NUM_OF_TYPES] = {'V', 'N', 'P', 'C', 'F', 'U', 'X', 'J', 'E', 'A', 'M', 'I', 'O'};
 
 enum type_t 
 {
@@ -38,7 +39,8 @@ enum type_t
     PAR_TYPE,
     COND_TYPE,
     FUNC_TYPE,
-    FUNCTION_TYPE,
+    FUNC_DEF_TYPE,
+    FUNC_CALL_TYPE,
     COMMA_TYPE,
     SEM_POINT_TYPE,
     ASSIGN_TYPE,
@@ -133,6 +135,20 @@ typedef struct
     ssize_t variables_capacity;
 } variables_t;
 
+typedef struct 
+{
+    ssize_t num_of_parameters;
+    char *name;
+    bool is_return_value;
+} function;
+
+typedef struct 
+{
+    function *functions;
+    ssize_t functions_size;
+    ssize_t functions_capacity;
+} functions_t;
+
 typedef struct node_t
 {
     type_t type;
@@ -148,6 +164,7 @@ typedef struct
 {
     ssize_t num_of_el;
     variables_t variables_s;
+    functions_t functions_s;
     node_t *root;
     const char *file_name;
 } program_tree;
@@ -186,8 +203,8 @@ void DestroyTokensBuffer(tokens_t *tokens);
 void NeccesaryExpansion(tokens_t *tokens);
 bool IsChrInside(char **expression, const char *string);
 void MakeParToken(tokens_t *tokens, char **expression);
-void MakeFunctionToken(tokens_t *tokens, char **expression);
-void MakeFuncToken(tokens_t *tokens, char **expression);
+void MakeFunctionToken(tokens_t *tokens, char **expression, const char *func_act);
+void MakeFuncToken(tokens_t *tokens, char **expression, const bool is_func_def);
 void MakeCompToken(tokens_t *tokens, char **expression);
 void MakeCompOrAssignToken(tokens_t *tokens, char **expression);
 void MakeOpToken(tokens_t *tokens, char **expression, const char *function);
@@ -217,6 +234,8 @@ node_t *InitNewNode(program_tree *tree, node_t *node_left, node_t *node_right, P
 node_t *NewNodeVarInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err);
 node_t *NewNodeStringInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err);
 node_t *NewNodeNumInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err);
+node_t *NewNodeFuncInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err, ssize_t num_of_parameters);
+node_t *NewNodeFuncCallInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err);
 
 char *ReadExpressionFromFile(const char *name_of_file, Program_Errors *err);
 size_t return_num_of_bytes_in_file(int fd1);
