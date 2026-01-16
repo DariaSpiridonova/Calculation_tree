@@ -217,7 +217,7 @@ void MakeCommaToken(tokens_t *tokens, char **expression);
 void MakeVarToken(tokens_t *tokens, char **expression);
 
 Program_Errors SaveTreeToFile(program_tree *tree, const char *name_of_file);
-void SaveTreeToFileRecursive(FILE *fp, node_t *node);
+void SaveTreeToFileRecursive(program_tree *tree, FILE *fp, node_t *node);
 
 Program_Errors MakeTreeFromFile(program_tree *tree, const char *logfile_name, const char *name_of_file);
 void SplitIntoParts(char *tree_buffer);
@@ -227,6 +227,7 @@ Program_Errors NodeFromFileInit(program_tree *tree, char **position, node_t **no
 node_t *NewNodeStringInitByPos(node_t **node, int type);
 node_t *NewNodeNumInitByPos(node_t **node);
 node_t *NewNodeVarInitByPos(program_tree *tree, node_t **node, Program_Errors *err);
+node_t *NewNodeFuncInitByPos(program_tree *tree, node_t **node, ssize_t num_of_parameters, int type_num, Program_Errors *err);
 
 node_t *GetG(program_tree *tree, tokens_t tokens, Program_Errors *err);
 

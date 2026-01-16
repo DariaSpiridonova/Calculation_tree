@@ -348,7 +348,7 @@ void MakeNumToken(tokens_t *tokens, char **expression)
     tokens->tokens_buffer[tokens->tokens_size].type = NUM_TYPE;
     char *value = *expression;
     size_t n = 0;
-    while (IsChrInside(expression, "0123456789")) 
+    while (IsChrInside(expression, "0123456789.")) 
     {
         (*expression)++;
         n++;

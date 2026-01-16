@@ -21,7 +21,7 @@ Program_Errors SaveTreeToFile(program_tree *tree, const char *name_of_file)
     if (!OpenFileSuccess(file_to_read, name_of_file))
         return ERROR_DURING_OPENING_FILE;
 
-    SaveTreeToFileRecursive(file_to_read, tree->root);
+    SaveTreeToFileRecursive(tree, file_to_read, tree->root);
 
     if (!CloseFileSuccess(file_to_read, name_of_file))
         return ERROR_DURING_CLOSING_FILE;
@@ -29,7 +29,7 @@ Program_Errors SaveTreeToFile(program_tree *tree, const char *name_of_file)
     return err;
 }
 
-void SaveTreeToFileRecursive(FILE *fp, node_t *node)
+void SaveTreeToFileRecursive(program_tree *tree, FILE *fp, node_t *node)
 {
     if (node == NULL)
     {
@@ -38,6 +38,19 @@ void SaveTreeToFileRecursive(FILE *fp, node_t *node)
     }
     
     fprintf(fp, " ( ");
+
+    ssize_t num_of_parameters = -1;
+    if (node->type == FUNC_DEF_TYPE || node->type == FUNC_CALL_TYPE)
+    {
+        for (ssize_t i = 0; i < tree->functions_s.functions_size; i++)
+        {
+            if (!strcmp(tree->functions_s.functions[i].name, node->name))
+            {
+                num_of_parameters = tree->functions_s.functions[i].num_of_parameters;
+                break;
+            }
+        }
+    }
     
     switch((int)node->type)
     {
@@ -68,12 +81,12 @@ void SaveTreeToFileRecursive(FILE *fp, node_t *node)
 
         case (int)FUNC_DEF_TYPE:
             fprintf(fp, " \"%s\" ", node->name);
-            fprintf(fp, " \"U\" ");
+            fprintf(fp, " \"U\" \"%zd\" ", num_of_parameters);
             break;
 
         case (int)FUNC_CALL_TYPE:
             fprintf(fp, " \"%s\" ", node->name);
-            fprintf(fp, " \"X\" ");
+            fprintf(fp, " \"X\" \"%zd\" ", num_of_parameters);
             break;
 
         case (int)COMMA_TYPE:
@@ -112,8 +125,8 @@ void SaveTreeToFileRecursive(FILE *fp, node_t *node)
             break;
             
     }
-    SaveTreeToFileRecursive(fp, node->left);
-    SaveTreeToFileRecursive(fp, node->right);
+    SaveTreeToFileRecursive(tree, fp, node->left);
+    SaveTreeToFileRecursive(tree, fp, node->right);
     fprintf(fp, " ) ");
     return;
 }
@@ -249,10 +262,28 @@ Program_Errors NodeFromFileInit(program_tree *tree, char **position, node_t **no
         }
     }
 
+    ssize_t num_of_parameters = -1;
+    if (type_num == (int)FUNC_DEF_TYPE || type_num == (int)FUNC_CALL_TYPE)
+    {
+        *position = strchr(*position, '"') + 1;
+        printf("*position = <%s>\n", *position);
+
+        char *num_of_params_in_string = strdup(*position);
+        num_of_parameters = (ssize_t)atoi(num_of_params_in_string);
+        free(num_of_params_in_string);
+
+        *position = strchr(*position, '\0') + 1;
+    }
+
     switch(type_num)
     {
         case (int)VAR_TYPE:
             NewNodeVarInitByPos(tree, node, &err);
+            break;
+
+        case (int)FUNC_DEF_TYPE:
+        case (int)FUNC_CALL_TYPE:
+            NewNodeFuncInitByPos(tree, node, num_of_parameters, type_num, &err);
             break;
 
         case (int)NUM_TYPE:
@@ -280,6 +311,47 @@ node_t *NewNodeNumInitByPos(node_t **node)
 {
     (*node)->type = NUM_TYPE;
     (*node)->number = atof((*node)->name);
+
+    return *node;
+}
+
+node_t *NewNodeFuncInitByPos(program_tree *tree, node_t **node, ssize_t num_of_parameters, int type_num, Program_Errors *err)
+{
+    bool is_func = false;
+    for (ssize_t i = 0; i < tree->functions_s.functions_size; i++)
+    {
+        if (!strcmp(tree->functions_s.functions[i].name, (*node)->name))
+        {
+            free((*node)->name);
+            (*node)->name = tree->functions_s.functions[i].name;
+            is_func = true;
+            printf("func = %s\n\n\n", tree->functions_s.functions[i].name);
+            break;
+        }
+    }
+
+    if (!is_func)
+    {
+        tree->functions_s.functions[tree->functions_s.functions_size] = {num_of_parameters, strdup((*node)->name), false};
+        free((*node)->name);
+        (*node)->name = tree->functions_s.functions[tree->functions_s.functions_size].name;
+        printf("func = %s\n\n\n", tree->functions_s.functions[tree->functions_s.functions_size].name);
+        tree->functions_s.functions_size++;
+    }
+
+    (type_num == (int)FUNC_DEF_TYPE) ? (*node)->type = FUNC_DEF_TYPE : (*node)->type = FUNC_CALL_TYPE;
+
+    if (tree->functions_s.functions_size >= tree->functions_s.functions_capacity - 1)
+    {
+        tree->functions_s.functions_capacity *= 2;
+        tree->functions_s.functions = (function *)realloc(tree->functions_s.functions, (size_t)tree->functions_s.functions_capacity*sizeof(function));
+
+        if (tree->functions_s.functions == NULL)
+        {
+            printf("ERROR_DURING_MEMORY_ALLOCATION in NewNodeVarInit\n");
+            *err = ERROR_DURING_MEMORY_ALLOCATION;
+        }
+    }
 
     return *node;
 }
