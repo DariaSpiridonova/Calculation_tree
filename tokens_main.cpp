@@ -32,11 +32,11 @@ int main()
     
     CALCULATION_TREE_DUMP(&program_tree_1);
 
-    // if ((err = TranscriptionIntoAssembler(&program_tree_1, "program_tree.asm")))
-    // {
-    //     PrintError(err);
-    //     return 5;
-    // }
+    if ((err = TranscriptionIntoAssembler(&program_tree_1, "program_tree.asm")))
+    {
+        PrintError(err);
+        return 5;
+    }
 
     // if ((err = OptimizationFunction(&program_tree_)))
     // {

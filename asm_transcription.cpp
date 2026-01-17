@@ -15,8 +15,10 @@ Program_Errors TranscriptionIntoAssembler(program_tree *tree, const char *asm_fi
         return ERROR_DURING_OPENING_FILE;
 
     ssize_t mark = 0;
+    ssize_t mark_call = 100;
 
-    WriteToAsmFileRecursive(tree, asm_file, tree->root, &mark);
+    WriteToAsmFileRecursive(tree, asm_file, tree->root, &mark, &mark_call);
+    fprintf(asm_file, "HLT\n");
 
     if (!CloseFileSuccess(asm_file, asm_file_name))
         return ERROR_DURING_CLOSING_FILE;
@@ -24,14 +26,23 @@ Program_Errors TranscriptionIntoAssembler(program_tree *tree, const char *asm_fi
     return err;
 }
 
-void WriteToAsmFileRecursive(program_tree *tree, FILE *fp, node_t *node, ssize_t *mark)
+void WriteToAsmFileRecursive(program_tree *tree, FILE *fp, node_t *node, ssize_t *mark, ssize_t *mark_call)
 {
     if (node == NULL)
         return;
 
-    WriteToAsmFileRecursive(tree, fp, node->left, mark);
-    WriteToAsmFileRecursive(tree, fp, node->right, mark);
+    if (node->type == COND_TYPE && !strcmp(node->name, "while"))
+    {
+        fprintf(fp, "CALL :%zd \n", *mark_call);
+        fprintf(fp, "JMP :%zd  \n\n", *mark + 3);
+        fprintf(fp, ":%zd      \n", *mark_call);
+        fprintf(fp, ":%zd      \n", *mark_call + 1);
+    }
+
+    WriteToAsmFileRecursive(tree, fp, node->left, mark, mark_call);
+    WriteToAsmFileRecursive(tree, fp, node->right, mark, mark_call);
     ssize_t index = 0;
+
 
     switch((int)node->type)
     {
@@ -53,21 +64,27 @@ void WriteToAsmFileRecursive(program_tree *tree, FILE *fp, node_t *node, ssize_t
             break;
 
         case (int)NUM_TYPE: // all
-            fprintf(fp, " PUSH %lf\n ", node->number);
+            fprintf(fp, "PUSH %d\n", (int)node->number);
             break;
 
         case (int)COND_TYPE:
             if      (!strcmp(node->name, "if")) // did not all 
             {
-                fprintf(fp, ":%zd\n", (*mark)++);
+                fprintf(fp, "\n:%zd\n", (*mark)++);
             } 
             else if (!strcmp(node->name, "while"))
             {
-
+                fprintf(fp, "CALL :%zd\n", ++(*mark_call));
+                fprintf(fp, "RET\n");
+                fprintf(fp, "\n:%zd\n", (*mark)++);
             }
             break;
 
-        case (int)FUNC_TYPE:  
+        case (int)FUNC_DEF_TYPE:  
+
+            break;
+
+        case (int)FUNC_CALL_TYPE:  
 
             break;
 
@@ -110,6 +127,8 @@ void WriteToAsmFileRecursive(program_tree *tree, FILE *fp, node_t *node, ssize_t
             {
                 fprintf(fp, "JBE :%zd\n", (*mark)++);
             }
+            fprintf(fp, "POPR   BP\n");
+            fprintf(fp, "POPR   BP\n");
             fprintf(fp, "PUSH 0\n");
             fprintf(fp, "JMP :%zd\n", *mark);
             fprintf(fp, ":%zd\n", *mark - 1);
@@ -174,7 +193,8 @@ void WriteToAsmFileRecursive(program_tree *tree, FILE *fp, node_t *node, ssize_t
         fprintf(fp, "JNE  :%zd\n", (*mark)++);
         fprintf(fp, "POPR   BP\n");
         fprintf(fp, "POPR   BP\n");
-        fprintf(fp, "JMP  :%zd\n", *mark);
+        !strcmp(node->parent->name, "if") ?
+            fprintf(fp, "JMP  :%zd\n", *mark) : fprintf(fp, "RET\n");
         fprintf(fp, ":%zd     \n", *mark - 1);
     }
 }
